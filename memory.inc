@@ -3,7 +3,7 @@
 /**
  * @author OZ
  * @copyright 2010
- * hi!
+ * hi
  */
 
 if (!class_exists('MultiAccess')) include_once __DIR__.'/MultiAccess.inc';
