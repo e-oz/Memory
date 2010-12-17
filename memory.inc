@@ -33,6 +33,7 @@ class Memory
 	const map_key_ttl = 2;
 	const map_key_serialized = 3;
 	const lock_key_prefix = '__lock_key_';
+	const max_ttl = 2592000;
 
 	/**
 	 * Add value to memory storage, only if this key does not exists (or false will be returned).
@@ -153,7 +154,7 @@ class Memory
 		$r = self::write_data($v, $start);
 		if ($r===false) return false;
 		$set_ttl = 0;
-		if ($ttl > 0 && $ttl < 2592000) $set_ttl = time()+$ttl;
+		if ($ttl > 0 && $ttl < self::max_ttl) $set_ttl = time()+$ttl;
 		$map[$k] = array(self::map_key_start => $start, self::map_key_fin => ($start+$size), self::map_key_ttl => $set_ttl, self::map_key_serialized => $data_serialized);
 		$r = self::$mem_object->save('map', $map);
 		if ($r===false) return false;
@@ -268,6 +269,7 @@ class Memory
 					$ttl_left = time()-$map[$k][self::map_key_ttl];
 				}
 			}
+			else $ttl_left = self::max_ttl;
 			$from = $map[$k][self::map_key_start];
 			$to = $map[$k][self::map_key_fin];
 			$data = self::read_data($from, $to);
@@ -566,7 +568,6 @@ class Memory
 	 * Value of this key are too old, so Process 1 going to refresh it. Simultaneously with Process 2.
 	 * But both of them trying to lock_key, and Process 1 only will refresh value of key (taking it from database, e.g.),
 	 * and Process 2 can decide, what he want to do - use old value and not spent time to database, or something else.
-	 * @see demo.php
 	 * @static
 	 * @param mixed $key
 	 * @param mixed $auto_unlocker_variable - pass empty, just declared variable
