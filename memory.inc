@@ -576,6 +576,7 @@ class Memory
 		if (!$r) return false;
 		$auto_unlocker_variable = new Key_AutoUnlocker(array(__CLASS__, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
+		return true;
 	}
 
 	/**
