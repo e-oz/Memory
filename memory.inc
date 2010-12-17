@@ -216,7 +216,7 @@ class Memory
 	 * Read data from memory storage
 	 *
 	 * @param mixed $k (string or array of string keys)
-	 * @param mixed $ttl_left = (time() - ttl) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
+	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
 	 * @return mixed
 	 */
 	public static function read($k = NULL, &$ttl_left = -1)
@@ -266,7 +266,7 @@ class Memory
 				}
 				else
 				{
-					$ttl_left = time()-$map[$k][self::map_key_ttl];
+					$ttl_left = $map[$k][self::map_key_ttl]-time();
 				}
 			}
 			else $ttl_left = self::max_ttl;
