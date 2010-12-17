@@ -112,6 +112,7 @@ class Memory
 	 * @param string $k
 	 * @param mixed $v
 	 * @param integer $ttl - time to live (store) in seconds
+	 * @param array $tags - array of tags for this key
 	 * @return bool
 	 */
 	public static function save($k, $v, $ttl = 259200, $tags = NULL)
@@ -347,7 +348,7 @@ class Memory
 	/**
 	 * Delete keys by tags
 	 *
-	 * @param mixed $tag - tag or array of tags
+	 * @param array|string $tag - tag or array of tags
 	 * @return boolean
 	 */
 	public static function del_by_tags($tag)
