@@ -566,6 +566,7 @@ class Memory
 	 * Value of this key are too old, so Process 1 going to refresh it. Simultaneously with Process 2.
 	 * But both of them trying to lock_key, and Process 1 only will refresh value of key (taking it from database, e.g.),
 	 * and Process 2 can decide, what he want to do - use old value and not spent time to database, or something else.
+	 * @see demo.php
 	 * @static
 	 * @param mixed $key
 	 * @param mixed $auto_unlocker_variable - pass empty, just declared variable
