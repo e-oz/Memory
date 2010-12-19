@@ -154,7 +154,7 @@ class Memory
 		$r = self::write_data($v, $start);
 		if ($r===false) return false;
 		$set_ttl = 0;
-		if ($ttl > 0 && $ttl < self::max_ttl) $set_ttl = time()+$ttl;
+		if ($ttl > 0 && $ttl <= self::max_ttl) $set_ttl = time()+$ttl;
 		$map[$k] = array(self::map_key_start => $start, self::map_key_fin => ($start+$size), self::map_key_ttl => $set_ttl, self::map_key_serialized => $data_serialized);
 		$r = self::$mem_object->save('map', $map);
 		if ($r===false) return false;
