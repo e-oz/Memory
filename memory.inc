@@ -120,7 +120,7 @@ class Memory
 	{
 		if (!self::$ini) self::ini();
 		if (!self::$ini) return false;
-		if (empty($k) || $v==NULL) return false;
+		if (empty($k) || $v===NULL) return false;
 		$auto_unlocker = NULL;
 		if (!self::$mutex->get_access_write($auto_unlocker)) return false;
 		$map = self::$mem_object->read('map');
