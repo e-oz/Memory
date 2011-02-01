@@ -26,6 +26,7 @@ class Memory
 	private static $shm_data_key;
 	private static $ini = false;
 	private static $readonly = false;
+	/** @var MultiAccess */
 	private static $mutex;
 
 	const map_key_start = 0;
@@ -291,6 +292,7 @@ class Memory
 		{
 			$i = 0;
 			$c = sizeof($from);
+			$data = array();
 			for (; $i < $c; $i++)
 			{
 				if (isset($from[$i]) && isset($to[$i]) && isset($keys[$i])) $data[$keys[$i]] = shmop_read(self::$shm_data_id, $from[$i], ($to[$i]-$from[$i]));
