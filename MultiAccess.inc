@@ -15,37 +15,30 @@ class MultiAccess
 	const readers = 1;
 	const writers = 2;
 	const wait_time = 1;
-	const max_readers_queue = 100;
-	const max_writers_queue = 100;
 
 	public function get_access_read(&$auto_unlocker_reference = -1)
 	{
 		if (($this->writers_count <= 0) && ($this->readers_count <= 0)) //if it is nested call - access should be given only once
 		{
-			$writers = $this->get_counter(self::writers); //if somebody are writing here now - we will wait
-			if ($writers > 0)
-			{
-				$readers = $this->get_counter(self::readers);
-				if ($readers < self::max_readers_queue) $this->wait(self::writers); //if some writer become freezed - don't wait too long
-			}
+			$this->wait(self::writers); //if somebody are writing here now - we will wait
+
 			$sent = $this->increment(); //increment count of readers - writers will be waiting for us while we read.
 			if ($sent===false)
 			{
-				$this->err_log[] = "gar: not incremented";
+				$this->err_log[] = __METHOD__.': not incremented';
 				return false;
 			}
 		}
 
-		if ($auto_unlocker_reference!=-1)
+		if ($auto_unlocker_reference!==-1)
 		{
-			$mutex = new autoUnlocker(array($this, 'release_access_read'));
-			$auto_unlocker_reference = $mutex;
+			$auto_unlocker_reference = new autoUnlocker(array($this, 'release_access_read'));
 		}
 		$this->readers_count++;
 		return true;
 	}
 
-	public function release_access_read($autoUnlocker = NULL)
+	public function release_access_read(IRevokable $autoUnlocker = NULL)
 	{
 		if (!empty($autoUnlocker)) $autoUnlocker->revoke();
 		if ($this->readers_count > 0) $this->readers_count--;
@@ -61,6 +54,7 @@ class MultiAccess
 			{
 				while ($this->readers_count > 0) $this->release_access_read($auto_unlocker_reference);
 			}
+
 			//acquire mutex for writing
 			if (empty($this->writers_mutex)) $this->writers_mutex = sem_get($this->writers_mutex_key, 1, 0777, 1);
 			if (empty($this->writers_mutex)) return false;
@@ -70,41 +64,39 @@ class MultiAccess
 			if (!sem_acquire($this->writers_mutex)) return false;
 			$acquire_time = microtime(true)-$starttime;
 			if ($acquire_time >= 1) $this->err_log[] = 'Acquire time: '.round($acquire_time, 4);
+
 			//tell to readers, that they should wait while we will write
-			$sent = $this->increment(self::writers);
+			//this action should be made before writer will wait for readers
+			$sent = $this->increment(self::writers); //after this command, readers will wait, until we will leave the queue
 			if ($sent===false)
 			{
-				$this->err_log[] = "gaw: not incremented";
+				$this->err_log[] = __METHOD__.': not incremented';
 				return false;
 			}
 			//but if readers has come before us - wait, until they finish
-			$readers = $this->get_counter(self::readers);
-			if ($readers > 0 && $this->readers_count < $readers) //if data locked by readers, and not by ours
-			{
-				$writers = $this->get_counter(self::writers);
-				if ($writers < self::max_writers_queue) $this->wait(self::readers); //if some reader become freezed - don't wait too long
-			}
+			$this->wait(self::readers);
 		}
 
-		if ($auto_unlocker_reference!=-1)
+		if ($auto_unlocker_reference!==-1)
 		{
-			$mutex = new autoUnlocker(array($this, 'release_access_write'));
-			$auto_unlocker_reference = $mutex;
+			$auto_unlocker_reference = new autoUnlocker(array($this, 'release_access_write'));
 		}
 		$this->writers_count++;
 		//and now we can write :)
 		return true;
 	}
 
-	public function release_access_write($autoUnlocker = NULL)
+	public function release_access_write(IRevokable $autoUnlocker = NULL)
 	{
 		if (!empty($autoUnlocker)) $autoUnlocker->revoke();
 		if ($this->writers_count > 0) $this->writers_count--;
 		if ($this->writers_count==0)
 		{
 			$this->decrement(self::writers); //tell to readers, that they can read now
-			if (empty($this->writers_mutex)) $this->writers_mutex = sem_get($this->writers_mutex_key, 1, 0777, 1);
-			if (sem_release($this->writers_mutex)) unset($this->writers_mutex);
+			if (!empty($this->writers_mutex))
+			{
+				if (sem_release($this->writers_mutex)) unset($this->writers_mutex);
+			}
 		}
 		return true;
 	}
@@ -143,10 +135,20 @@ class MultiAccess
 		do
 		{
 			$stat = msg_stat_queue($q);
+			if (empty($stat)) break;
+			if ($stat['msg_qnum'] <= 0) break;
+
 			if ((time()-$starttime) > self::wait_time)
 			{
 				$this->err_log[] = 'waiting for '.$type."\n".$this->printable_backtrace();
-				for ($i = 0; $i < $stat['msg_qnum']; $i++) $this->decrement($type);
+				$loop2 = 0;
+				while ($stat['msg_qnum'] > 0)
+				{
+					$this->decrement($type);
+					$stat = msg_stat_queue($q);
+					$loop2++;
+					if ($loop2 > 1000) break;
+				}
 				break;
 			}
 		}
@@ -191,7 +193,8 @@ class MultiAccess
 			$this->err_log[] = 'writers count = '.$this->writers_count;
 			while ($this->writers_count > 0) $this->release_access_write();
 		}
-		elseif (!empty($this->writers_mutex)) @sem_release($this->writers_mutex);
+		if (!empty($this->writers_mutex)) @sem_release($this->writers_mutex);
+
 		if ($this->readers_count > 0)
 		{
 			$this->err_log[] = 'readers count = '.$this->readers_count;
@@ -234,8 +237,13 @@ class MultiAccess
 	}
 }
 
+interface IRevokable
+{
+	function revoke();
+}
+
 /** thanks to authors of RAII! */
-class autoUnlocker
+class autoUnlocker implements IRevokable
 {
 	protected $Unlock;
 
