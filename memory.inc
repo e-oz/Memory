@@ -14,31 +14,19 @@ class Key_AutoUnlocker extends autoUnlocker
 	public $key = '';
 }
 
-/**
- * it will be wrappers, i suppose
- */
 class Memory
 {
-	/** @var mem */
-	public static $mem_object;
-	public static $shmsize = 102400;
-	public static $id = __FILE__;
-	public static $max_size = 10485760;
-	public static $prefix = '';
+	/** @var MemoryObject */
+	private static $memory_object;
 
-	private static $shm_data_id;
-	private static $shm_data_key;
-	private static $ini = false;
-	private static $readonly = false;
-	/** @var MultiAccess */
-	private static $mutex;
-
-	const map_key_start = 0;
-	const map_key_fin = 1;
-	const map_key_ttl = 2;
-	const map_key_serialized = 3;
-	const lock_key_prefix = '__lock_key_';
-	const max_ttl = 2592000;
+	public static function getMemoryObject()
+	{
+		if (empty(self::$memory_object))
+		{
+			self::$memory_object = new MemoryObject();
+		}
+		return self::$memory_object;
+	}
 
 	/**
 	 * Add value to memory storage, only if this key does not exists (or false will be returned).
@@ -50,66 +38,7 @@ class Memory
 	 */
 	public static function add($k, $v, $ttl = 259200, $tags = NULL)
 	{
-		if (!self::$ini) self::ini();
-		if (!self::$ini) return false;
-		if (empty($k) || $v==NULL) return false;
-		$auto_unlocker = NULL;
-		if (!self::$mutex->get_access_write($auto_unlocker)) return false;
-		$map = self::$mem_object->read('map');
-		if (array_key_exists($k, $map)) return false;
-		$data_serialized = 0;
-		if (!is_scalar($v))
-		{
-			$v = serialize($v);
-			$data_serialized = 1;
-		}
-		$size = strlen($v);
-		if (empty($map)) $start = 0;
-		else
-		{
-			$start = self::find_free_space($map, $size);
-			if ($start===false) return false;
-		}
-		$r = self::write_data($v, $start);
-		if ($r===false) return false;
-		$set_ttl = 0;
-		if ($ttl > 0 && $ttl < 2592000) $set_ttl = time()+$ttl;
-		$map[$k] = array(self::map_key_start => $start, self::map_key_fin => ($start+$size), self::map_key_ttl => $set_ttl, self::map_key_serialized => $data_serialized);
-		$r = self::$mem_object->save('map', $map);
-		if ($r===false) return false;
-		if (!empty($tags) && is_array($tags))
-		{
-			$mem_tags = self::$mem_object->read('tags');
-			foreach ($tags as $tag)
-			{
-				if (empty($mem_tags[$tag]) || !in_array($k, $mem_tags[$tag])) $mem_tags[$tag][] = $k;
-			}
-			self::$mem_object->save('tags', $mem_tags);
-		}
-		return true;
-	}
-
-	/**
-	 * Write data to storage directly
-	 * @access private
-	 * @param mixed $data (string or array)
-	 * @param mixed $start (integer or array)
-	 * @return bool
-	 */
-	private static function write_data(&$data, $start)
-	{
-		$r = 0;
-		if (is_array($start) && is_array($data))
-		{
-			$i = 0;
-			$c = sizeof($start);
-			for (; $i < $c; $i++)
-			{
-				if (isset($data[$i]) && isset($start[$i])) $r += shmop_write(self::$shm_data_id, $data[$i], $start[$i]);
-			}
-		}
-		else $r = shmop_write(self::$shm_data_id, $data, $start);
-		return $r;
+		return self::getMemoryObject()->add($k, $v, $ttl, $tags);
 	}
 
 	/**
@@ -123,12 +52,273 @@ class Memory
 	 */
 	public static function save($k, $v, $ttl = 259200, $tags = NULL)
 	{
-		if (!self::$ini) self::ini();
-		if (!self::$ini) return false;
+		return self::getMemoryObject()->save($k, $v, $ttl, $tags);
+	}
+
+	/**
+	 * Read data from memory storage
+	 *
+	 * @param mixed $k (string or array of string keys)
+	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
+	 * @return mixed
+	 */
+	public static function read($k = NULL, &$ttl_left = -1)
+	{
+		return self::getMemoryObject()->read($k, $ttl_left);
+	}
+
+	/**
+	 * Delete key or array of keys from storage (from map)
+	 *
+	 * @param mixed $k
+	 * @return boolean
+	 */
+	public static function del($k)
+	{
+		return self::getMemoryObject()->del($k);
+	}
+
+	/**
+	 * Delete old (by ttl) variables from storage (map)
+	 *
+	 * @return boolean
+	 */
+	public static function del_old(Array $with_keys = NULL)
+	{
+		return self::getMemoryObject()->del_old($with_keys);
+	}
+
+	/**
+	 * Delete keys by tags
+	 *
+	 * @param array|string $tag - tag or array of tags
+	 * @return boolean
+	 */
+	public static function del_by_tags($tag)
+	{
+		return self::getMemoryObject()->del_by_tags($tag);
+	}
+
+	/**
+	 * Select from storage by params
+	 * k - key, r - relation, v - value
+	 * example: select(array(array('k'=>'user_id',	'r'=>'<',	'v'=>1))); - select where user_id<1
+	 * @param array $params
+	 * @param bool $get_array
+	 * @return mixed
+	 */
+	public static function select($params, $get_array = false)
+	{
+		return self::getMemoryObject()->select($params, $get_array);
+	}
+
+	/**
+	 * Select from storage via callback function
+	 *
+	 * @param callback $fx
+	 * @param bool $get_array
+	 * @return mixed
+	 */
+	public static function select_fx($fx, $get_array = false)
+	{
+		return self::getMemoryObject()->select_fx($fx, $get_array);
+	}
+
+	/**
+	 * Increment
+	 *
+	 * @param mixed $key
+	 * @param integer $by_value
+	 * @return bool
+	 */
+	public static function increment($key, $by_value = 1)
+	{
+		return self::getMemoryObject()->increment($key, $by_value);
+	}
+
+	public static function get_stat()
+	{
+		return self::getMemoryObject()->get_stat();
+	}
+
+	public static function ini(MemoryObject $MemoryObject = NULL)
+	{
+		if (is_object($MemoryObject)) self::$memory_object = $MemoryObject;
+	}
+
+	/**
+	 * Get exclusive mutex for key. Key will be still accessible to read and write, but
+	 * another process can exclude dog-pile effect, if before updating the key he will try to get this mutex.
+	 * Example:
+	 * Process 1 reads key simultaneously with Process 2.
+	 * Value of this key are too old, so Process 1 going to refresh it. Simultaneously with Process 2.
+	 * But both of them trying to lock_key, and Process 1 only will refresh value of key (taking it from database, e.g.),
+	 * and Process 2 can decide, what he want to do - use old value and not spent time to database, or something else.
+	 * @static
+	 * @param mixed $key
+	 * @param mixed $auto_unlocker_variable - pass empty, just declared variable
+	 */
+	public static function lock_key($key, &$auto_unlocker_variable)
+	{
+		return self::getMemoryObject()->lock_key($key, $auto_unlocker_variable);
+	}
+
+	/**
+	 * Unlock key, locked by method 'lock_key'
+	 * @static
+	 * @param Key_AutoUnlocker $auto_unlocker
+	 * @return bool
+	 */
+	public static function unlock_key(Key_AutoUnlocker $auto_unlocker)
+	{
+		return self::getMemoryObject()->unlock_key($auto_unlocker);
+	}
+}
+
+class MemoryObject
+{
+	/** @var mem */
+	protected $mem_object;
+	protected $shmsize = 102400;
+	protected $id = __FILE__;
+	protected $max_size = 10485760;
+	protected $shm_data_id;
+	protected $shm_data_key;
+	protected $readonly = false;
+	/** @var MultiAccess */
+	protected $mutex;
+
+	const map_key_start = 0;
+	const map_key_fin = 1;
+	const map_key_ttl = 2;
+	const map_key_serialized = 3;
+	const lock_key_prefix = '__lock_key_';
+	const max_ttl = 2592000;
+
+	/**
+	 * Initialize (constructor)
+	 *
+	 * @param string $id
+	 * @param integer $size
+	 * @param integer $maxsize
+	 * @return boolean
+	 */
+	public function __construct($id = '', $size = 0, $maxsize = 0)
+	{
+		if (!empty($id)) $this->id = $id;
+		if (!empty($size)) $this->shmsize = $size;
+		if (!empty($maxsize)) $this->max_size = $maxsize;
+
+		//Create Mutex ("multiple read, one write")
+		$this->mutex = new MultiAccess($this->id);
+
+		//Create "shmop" to store data
+		$this->shm_data_key = ftok($this->id, 'D'); //D - Data. But I still love my son Nikita ;)
+		$this->shm_data_id = @shmop_open($this->shm_data_key, "w", 0, 0);
+		if (!$this->shm_data_id)
+		{
+			$this->shm_data_id = @shmop_open($this->shm_data_key, "a", 0, 0);
+			if ($this->shm_data_id!==false) $this->readonly = true;
+		}
+
+		//if memory not yet exists - lets create
+		if (!$this->shm_data_id) $this->shm_data_id = shmop_open($this->shm_data_key, "n", 0777, $this->max_size);
+		if (!$this->shm_data_id) return false;
+
+		//Create an mem-object to store the Map
+		$map_id_key = ftok($this->id, 'h')+12;
+		$this->mem_object = new mem($map_id_key, $this->shmsize, $this->max_size);
+		if (is_object($this->mem_object)) $this->ini = true;
+		else return false;
+		return $this->ini;
+	}
+
+	/**
+	 * Add value to memory storage, only if this key does not exists (or false will be returned).
+	 *
+	 * @param string $k
+	 * @param mixed $v
+	 * @param integer $ttl
+	 * @return boolean
+	 */
+	public function add($k, $v, $ttl = 259200, $tags = NULL)
+	{
+		if (empty($k) || $v==NULL) return false;
+		$auto_unlocker = NULL;
+		if (!$this->mutex->get_access_write($auto_unlocker)) return false;
+		$map = $this->mem_object->read('map');
+		if (array_key_exists($k, $map)) return false;
+		$data_serialized = 0;
+		if (!is_scalar($v))
+		{
+			$v = serialize($v);
+			$data_serialized = 1;
+		}
+		$size = strlen($v);
+		if (empty($map)) $start = 0;
+		else
+		{
+			$start = $this->find_free_space($map, $size);
+			if ($start===false) return false;
+		}
+		$r = $this->write_data($v, $start);
+		if ($r===false) return false;
+		$set_ttl = 0;
+		if ($ttl > 0 && $ttl < 2592000) $set_ttl = time()+$ttl;
+		$map[$k] = array(self::map_key_start => $start, self::map_key_fin => ($start+$size), self::map_key_ttl => $set_ttl, self::map_key_serialized => $data_serialized);
+		$r = $this->mem_object->save('map', $map);
+		if ($r===false) return false;
+		if (!empty($tags) && is_array($tags))
+		{
+			$mem_tags = $this->mem_object->read('tags');
+			foreach ($tags as $tag)
+			{
+				if (empty($mem_tags[$tag]) || !in_array($k, $mem_tags[$tag])) $mem_tags[$tag][] = $k;
+			}
+			$this->mem_object->save('tags', $mem_tags);
+		}
+		return true;
+	}
+
+	/**
+	 * Write data to storage directly
+	 * @access private
+	 * @param mixed $data (string or array)
+	 * @param mixed $start (integer or array)
+	 * @return bool
+	 */
+	protected function write_data(&$data, $start)
+	{
+		$r = 0;
+		if (is_array($start) && is_array($data))
+		{
+			$i = 0;
+			$c = sizeof($start);
+			for (; $i < $c; $i++)
+			{
+				if (isset($data[$i]) && isset($start[$i])) $r += shmop_write($this->shm_data_id, $data[$i], $start[$i]);
+			}
+		}
+		else $r = shmop_write($this->shm_data_id, $data, $start);
+		return $r;
+	}
+
+	/**
+	 * Save variable in memory storage
+	 *
+	 * @param string $k
+	 * @param mixed $v
+	 * @param integer $ttl - time to live (store) in seconds
+	 * @param array $tags - array of tags for this key
+	 * @return bool
+	 */
+	public function save($k, $v, $ttl = 259200, $tags = NULL)
+	{
+
 		if (empty($k) || $v===NULL) return false;
 		$auto_unlocker = NULL;
-		if (!self::$mutex->get_access_write($auto_unlocker)) return false;
-		$map = self::$mem_object->read('map');
+		if (!$this->mutex->get_access_write($auto_unlocker)) return false;
+		$map = $this->mem_object->read('map');
 		$data_serialized = 0;
 		if (!is_scalar($v))
 		{
@@ -141,7 +331,7 @@ class Memory
 		{
 			if (!array_key_exists($k, $map))
 			{
-				$start = self::find_free_space($map, $size);
+				$start = $this->find_free_space($map, $size);
 				if ($start===false) return false;
 			}
 			else
@@ -149,28 +339,28 @@ class Memory
 				if ($size <= ($map[$k][self::map_key_fin]-$map[$k][self::map_key_start])) $start = $map[$k][self::map_key_start];
 				else
 				{
-					self::del_old(array($k));
-					$map = self::$mem_object->read('map');
-					$start = self::find_free_space($map, $size);
+					$this->del_old(array($k));
+					$map = $this->mem_object->read('map');
+					$start = $this->find_free_space($map, $size);
 					if ($start===false) return false;
 				}
 			}
 		}
-		$r = self::write_data($v, $start);
+		$r = $this->write_data($v, $start);
 		if ($r===false) return false;
 		$set_ttl = 0;
 		if ($ttl > 0 && $ttl <= self::max_ttl) $set_ttl = time()+$ttl;
 		$map[$k] = array(self::map_key_start => $start, self::map_key_fin => ($start+$size), self::map_key_ttl => $set_ttl, self::map_key_serialized => $data_serialized);
-		$r = self::$mem_object->save('map', $map);
+		$r = $this->mem_object->save('map', $map);
 		if ($r===false) return false;
 		if (!empty($tags) && is_array($tags))
 		{
-			$mem_tags = self::$mem_object->read('tags');
+			$mem_tags = $this->mem_object->read('tags');
 			foreach ($tags as $tag)
 			{
 				if (empty($mem_tags[$tag]) || !in_array($k, $mem_tags[$tag])) $mem_tags[$tag][] = $k;
 			}
-			self::$mem_object->save('tags', $mem_tags);
+			$this->mem_object->save('tags', $mem_tags);
 		}
 		return true;
 	}
@@ -182,11 +372,11 @@ class Memory
 	 * @param mixed $size
 	 * @return int
 	 */
-	private static function find_free_space(array $map, $size)
+	protected function find_free_space(array $map, $size)
 	{
 		$c = count($map);
 		if ($c < 1) return 0;
-		$_end = self::$max_size;
+		$_end = $this->max_size;
 		usort($map, array(__CLASS__, 'sort_map'));
 		$imap = array();
 		foreach ($map as &$v) $imap[] = $v;
@@ -205,12 +395,12 @@ class Memory
 
 	/**
 	 * Sort map by start value at map
-	 *
+	 * This function are public only for the function "usort", she should not be used in interface.
 	 * @param mixed $a
 	 * @param mixed $b
 	 * @return mixed
 	 */
-	public static function sort_map($a, $b)
+	public function sort_map($a, $b)
 	{
 		if ($a[self::map_key_start]==$b[self::map_key_start]) return 0;
 		if ($a[self::map_key_start] < $b[self::map_key_start]) return -1;
@@ -224,13 +414,12 @@ class Memory
 	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
 	 * @return mixed
 	 */
-	public static function read($k = NULL, &$ttl_left = -1)
+	public function read($k = NULL, &$ttl_left = -1)
 	{
-		if (!self::$ini) self::ini();
-		if (!self::$ini) return false;
+
 		$auto_unlocker = NULL;
-		if (!self::$mutex->get_access_read($auto_unlocker)) return false;
-		$map = self::$mem_object->read('map');
+		if (!$this->mutex->get_access_read($auto_unlocker)) return false;
+		$map = $this->mem_object->read('map');
 		if (empty($map)) return NULL;
 		if (empty($k)) return $map;
 		if (is_array($k))
@@ -249,8 +438,8 @@ class Memory
 				$from_points[] = $map[$key][self::map_key_start];
 				$to_points[] = $map[$key][self::map_key_fin];
 			}
-			if (!empty($todelete)) self::del($todelete);
-			$data = self::read_data($from_points, $to_points, $k);
+			if (!empty($todelete)) $this->del($todelete);
+			$data = $this->read_data($from_points, $to_points, $k);
 			if (!empty($data))
 			{
 				foreach ($data as $key => &$value)
@@ -266,7 +455,7 @@ class Memory
 			{
 				if ($map[$k][self::map_key_ttl] < time())
 				{
-					self::del($k);
+					$this->del($k);
 					return NULL;
 				}
 				else
@@ -277,7 +466,7 @@ class Memory
 			else $ttl_left = self::max_ttl;
 			$from = $map[$k][self::map_key_start];
 			$to = $map[$k][self::map_key_fin];
-			$data = self::read_data($from, $to);
+			$data = $this->read_data($from, $to);
 			if ($map[$k][self::map_key_serialized]==1) $data = unserialize($data);
 		}
 		return $data;
@@ -290,7 +479,7 @@ class Memory
 	 * @param mixed $to (integer or array of integers)
 	 * @return
 	 */
-	private static function read_data($from, $to, Array $keys = NULL)
+	protected function read_data($from, $to, Array $keys = NULL)
 	{
 		if (!is_array($from) && is_array($to) && !empty($keys))
 		{
@@ -299,10 +488,10 @@ class Memory
 			$data = array();
 			for (; $i < $c; $i++)
 			{
-				if (isset($from[$i]) && isset($to[$i]) && isset($keys[$i])) $data[$keys[$i]] = shmop_read(self::$shm_data_id, $from[$i], ($to[$i]-$from[$i]));
+				if (isset($from[$i]) && isset($to[$i]) && isset($keys[$i])) $data[$keys[$i]] = shmop_read($this->shm_data_id, $from[$i], ($to[$i]-$from[$i]));
 			}
 		}
-		else $data = shmop_read(self::$shm_data_id, $from, ($to-$from));
+		else $data = shmop_read($this->shm_data_id, $from, ($to-$from));
 		return $data;
 	}
 
@@ -312,20 +501,19 @@ class Memory
 	 * @param mixed $k
 	 * @return boolean
 	 */
-	public static function del($k)
+	public function del($k)
 	{
-		if (!self::$ini) self::ini();
-		if (!self::$ini) return false;
+
 		if ($k==NULL || $k=='') return false;
 		$auto_unlocker = NULL;
-		if (!self::$mutex->get_access_write($auto_unlocker)) return false;
-		$map = self::$mem_object->read('map');
+		if (!$this->mutex->get_access_write($auto_unlocker)) return false;
+		$map = $this->mem_object->read('map');
 		if (is_array($k))
 		{
 			foreach ($k as $key) unset($map[$key]);
 		}
 		else unset($map[$k]);
-		$r = self::$mem_object->save('map', $map);
+		$r = $this->mem_object->save('map', $map);
 		if ($r===false) return false;
 		return true;
 	}
@@ -335,21 +523,20 @@ class Memory
 	 *
 	 * @return boolean
 	 */
-	public static function del_old(Array $with_keys = NULL)
+	public function del_old(Array $with_keys = NULL)
 	{
-		if (!self::$ini) self::ini();
-		if (!self::$ini) return false;
+
 		$auto_unlocker = NULL;
-		if (!self::$mutex->get_access_write($auto_unlocker)) return false;
+		if (!$this->mutex->get_access_write($auto_unlocker)) return false;
 		$r = 0;
-		$map = self::$mem_object->read('map');
+		$map = $this->mem_object->read('map');
 		$todel = array();
 		foreach ($map as $k => &$v)
 		{
 			if (!empty($v[self::map_key_ttl]) && $v[self::map_key_ttl] < time()) $todel[] = $k;
 		}
 		if (!empty($with_keys)) $todel = array_merge($todel, $with_keys);
-		if (!empty($todel)) $r = self::del($todel);
+		if (!empty($todel)) $r = $this->del($todel);
 		return $r;
 	}
 
@@ -359,21 +546,20 @@ class Memory
 	 * @param array|string $tag - tag or array of tags
 	 * @return boolean
 	 */
-	public static function del_by_tags($tag)
+	public function del_by_tags($tag)
 	{
-		if (!self::$ini) self::ini();
-		if (!self::$ini) return false;
+
 		if (empty($tag)) return false;
 		$auto_unlocker = NULL;
-		if (!self::$mutex->get_access_write($auto_unlocker)) return false;
-		$mem_tags = self::$mem_object->read('tags');
+		if (!$this->mutex->get_access_write($auto_unlocker)) return false;
+		$mem_tags = $this->mem_object->read('tags');
 		if (!is_array($tag)) $tag = array($tag);
 		$todel = array();
 		foreach ($tag as $t)
 		{
 			if (!empty($mem_tags[$t])) $todel = array_merge($todel, $mem_tags[$t]);
 		}
-		$r = self::del($todel);
+		$r = $this->del($todel);
 		return $r;
 	}
 
@@ -385,18 +571,17 @@ class Memory
 	 * @param bool $get_array
 	 * @return mixed
 	 */
-	public static function select($params, $get_array = false)
+	public function select($params, $get_array = false)
 	{
-		if (!self::$ini) self::ini();
-		if (!self::$ini) return false;
+
 		$auto_unlocker = NULL;
-		if (!self::$mutex->get_access_read($auto_unlocker)) return false;
-		$map = self::$mem_object->read('map');
+		if (!$this->mutex->get_access_read($auto_unlocker)) return false;
+		$map = $this->mem_object->read('map');
 		$arr = array();
 		foreach ($map as $key => &$zs)
 		{
 			if (!$zs[self::map_key_serialized]) continue;
-			$s = self::read($key);
+			$s = $this->read($key);
 			if (empty($s)) continue;
 			$matched = true;
 			foreach ($params as $p)
@@ -451,18 +636,17 @@ class Memory
 	 * @param bool $get_array
 	 * @return mixed
 	 */
-	public static function select_fx($fx, $get_array = false)
+	public function select_fx($fx, $get_array = false)
 	{
-		if (!self::$ini) self::ini();
-		if (!self::$ini) return false;
+
 		$auto_unlocker = NULL;
-		if (!self::$mutex->get_access_read($auto_unlocker)) return false;
-		$map = self::$mem_object->read('map');
+		if (!$this->mutex->get_access_read($auto_unlocker)) return false;
+		$map = $this->mem_object->read('map');
 		$arr = array();
 		foreach ($map as $index => &$zs)
 		{
 			if (!$zs[self::map_key_serialized]) continue;
-			$s = self::read($index);
+			$s = $this->read($index);
 			if (empty($s)) continue;
 			if ($fx($s, $index)===true)
 			{
@@ -481,89 +665,52 @@ class Memory
 	 * @param integer $by_value
 	 * @return bool
 	 */
-	public static function increment($key, $by_value = 1)
+	public function increment($key, $by_value = 1)
 	{
-		if (!self::$ini) self::ini();
-		if (!self::$ini) return false;
+
 		if (empty($key)) return false;
 		$auto_unlocker = NULL;
-		if (!self::$mutex->get_access_write($auto_unlocker)) return false;
-		$map = self::$mem_object->read('map');
+		if (!$this->mutex->get_access_write($auto_unlocker)) return false;
+		$map = $this->mem_object->read('map');
 		if (!array_key_exists($key, $map))
 		{
-			return self::save($key, $by_value);
+			return $this->save($key, $by_value);
 		}
-		$value = self::read($key);
+		$value = $this->read($key);
 		if (is_numeric($value) && is_numeric($by_value)) $value += $by_value;
 		else $value .= $by_value;
-		self::save($key, $value);
+		$this->save($key, $value);
 		return true;
 	}
 
-	public static function get_stat()
+	public function get_stat()
 	{
-		if (!self::$ini) self::ini();
-		if (!self::$ini) return false;
+
 		$stat = array();
-		$map = self::$mem_object->read('map');
+		$map = $this->mem_object->read('map');
 		$size = 0;
 		if (!empty($map)) foreach ($map as $v) $size += ($v[self::map_key_fin]-$v[self::map_key_start]);
 		$stat['size'] = $size;
-		$q_read = msg_get_queue(self::$mutex->read_q_key);
+		$q_read = msg_get_queue($this->mutex->getReadQKey());
 		if (!empty($q_read))
 		{
 			$q_stat = msg_stat_queue($q_read);
 			$stat['readers'] = $q_stat['msg_qnum'];
-			$stat['readers_qid'] = self::$mutex->read_q_key;
+			$stat['readers_qid'] = $this->mutex->getReadQKey();
 		}
-		$q_writers = msg_get_queue(self::$mutex->write_q_key);
+		$q_writers = msg_get_queue($this->mutex->getWriteQKey());
 		if (!empty($q_writers))
 		{
 			$q_stat = msg_stat_queue($q_writers);
 			$stat['writers'] = $q_stat['msg_qnum'];
-			$stat['writers_qid'] = self::$mutex->write_q_key;
+			$stat['writers_qid'] = $this->mutex->getWriteQKey();
 		}
-		$stat['shm_data_key'] = self::$shm_data_key;
-		$stat['shm_data_id'] = self::$shm_data_id;
-		$stat['shm_map_id'] = self::$mem_object->id;
+		$stat['shm_key'] = $this->shm_data_key;
+		$stat['shm_id'] = $this->shm_data_id;
+		$stat['max_size'] = $this->max_size;
+		$stat['head'] = $this->mem_object->get_stat();
+		$stat['err_log'] = $this->mutex->getErrLog();
 		return $stat;
-	}
-
-	/**
-	 * Initialize (constructor)
-	 *
-	 * @param string $id
-	 * @param integer $size
-	 * @param integer $maxsize
-	 * @return boolean
-	 */
-	public static function ini($id = '', $size = '', $maxsize = '' /*,$prefix=''*/)
-	{
-		if (self::$ini==true) return true;
-		if (is_object(self::$mem_object)) return true;
-		if (!empty($id)) self::$id = $id;
-		if (!empty($size)) self::$shmsize = $size;
-		if (!empty($maxsize)) self::$max_size = $maxsize;
-		//if (!empty($prefix) && is_scalar($prefix)) self::$prefix=$prefix;
-		//Create mutex "multiple read, one write"
-		self::$mutex = new MultiAccess(self::$id);
-		//Create shmop to store data
-		self::$shm_data_key = ftok(self::$id, 'D'); //D - Data. But I still love my son Nikita ;)
-		self::$shm_data_id = @shmop_open(self::$shm_data_key, "w", 0, 0);
-		if (!self::$shm_data_id)
-		{
-			self::$shm_data_id = @shmop_open(self::$shm_data_key, "a", 0, 0);
-			if (self::$shm_data_id!==false) self::$readonly = true;
-		}
-		//if memory not yet exists - lets create
-		if (!self::$shm_data_id) self::$shm_data_id = shmop_open(self::$shm_data_key, "n", 0777, self::$max_size);
-		if (!self::$shm_data_id) return false;
-		//Create mem-object to store map
-		$map_id_key = ftok(self::$id, 'h')+12;
-		self::$mem_object = new mem($map_id_key, self::$shmsize, self::$max_size);
-		if (is_object(self::$mem_object)) self::$ini = true;
-		else return false;
-		return self::$ini;
 	}
 
 	/**
@@ -578,9 +725,9 @@ class Memory
 	 * @param mixed $key
 	 * @param mixed $auto_unlocker_variable - pass empty, just declared variable
 	 */
-	public static function lock_key($key, &$auto_unlocker_variable)
+	public function lock_key($key, &$auto_unlocker_variable)
 	{
-		$r = self::$mem_object->add(self::lock_key_prefix.$key, 1);
+		$r = $this->mem_object->add(self::lock_key_prefix.$key, 1);
 		if (!$r) return false;
 		$auto_unlocker_variable = new Key_AutoUnlocker(array(__CLASS__, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
@@ -593,10 +740,11 @@ class Memory
 	 * @param Key_AutoUnlocker $auto_unlocker
 	 * @return bool
 	 */
-	public static function unlock_key(Key_AutoUnlocker $auto_unlocker)
+	public function unlock_key(Key_AutoUnlocker $auto_unlocker)
 	{
 		if (empty($auto_unlocker->key)) return false;
 		$auto_unlocker->revoke();
-		return self::$mem_object->del(self::lock_key_prefix.$auto_unlocker->key);
+		return $this->mem_object->del(self::lock_key_prefix.$auto_unlocker->key);
 	}
+
 }

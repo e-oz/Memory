@@ -2,16 +2,16 @@
 
 class MultiAccess
 {
-	public $read_q_key = 1;
-	public $write_q_key = 2;
-	public $writers_mutex_key = 3;
-	public $err_log = array();
-	public $log = array();
-	private $read_q;
-	private $write_q;
-	private $writers_mutex;
-	private $writers_count = 0;
-	private $readers_count = 0;
+	protected $read_q_key = 1;
+	protected $write_q_key = 2;
+	protected $writers_mutex_key = 3;
+	protected $err_log = array();
+	protected $read_q;
+	protected $write_q;
+	protected $writers_mutex;
+	protected $writers_count = 0;
+	protected $readers_count = 0;
+
 	const readers = 1;
 	const writers = 2;
 	const wait_time = 1;
@@ -101,7 +101,7 @@ class MultiAccess
 		return true;
 	}
 
-	private function increment($type = self::readers)
+	protected function increment($type = self::readers)
 	{
 		$q = $this->select_q($type);
 		if (empty($q)) return false;
@@ -110,7 +110,7 @@ class MultiAccess
 		return true;
 	}
 
-	private function decrement($type = self::readers)
+	protected function decrement($type = self::readers)
 	{
 		$q = $this->select_q($type);
 		if (empty($q)) return false;
@@ -126,7 +126,7 @@ class MultiAccess
 		return $stat['msg_qnum'];
 	}
 
-	private function wait($type = self::writers)
+	protected function wait($type = self::writers)
 	{
 		$q = $this->select_q($type);
 		if (empty($q)) return false;
@@ -156,7 +156,7 @@ class MultiAccess
 		return true;
 	}
 
-	private function select_q($type)
+	protected function select_q($type)
 	{
 		if ($type==self::readers)
 		{
@@ -207,7 +207,7 @@ class MultiAccess
 		}
 	}
 
-	private static function printable_backtrace()
+	protected function printable_backtrace()
 	{
 		$tmp = debug_backtrace();
 		array_shift($tmp);
@@ -235,6 +235,16 @@ class MultiAccess
 		}
 		return rtrim($str);
 	}
+
+	public function getReadQKey()
+	{ return $this->read_q_key; }
+
+	public function getWriteQKey()
+	{ return $this->write_q_key; }
+
+	public function getErrLog()
+	{ return $this->err_log; }
+
 }
 
 interface IRevokable

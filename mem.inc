@@ -2,16 +2,16 @@
 
 class mem
 {
-	public $id = __FILE__;
-	public $shmsize = 70000;
-	public $max_size = 2097152;
-	public $errlog = array();
+	protected $id = __FILE__;
+	protected $shmsize = 70000;
+	protected $max_size = 2097152;
+	protected $errlog = array();
 	/** @var MultiAccess $sem */
-	public $sem;
+	protected $sem;
 
-	private $mem = array();
-	private $shmkey = 0;
-	private $shm = 0;
+	protected $mem = array();
+	protected $shmkey = 0;
+	protected $shm = 0;
 
 	protected $ini = false;
 	protected $readonly = false;
@@ -144,6 +144,7 @@ class mem
 		if (!$this->sem->get_access_read($auto_unlocker)) return false;
 		$this->readmemory();
 		$this->sem->release_access_read($auto_unlocker);
+		if (empty($this->mem)) return false;
 		$arr = array();
 		foreach ($this->mem as $s)
 		{
@@ -276,7 +277,7 @@ class mem
 	 * @param int $size
 	 * @return bool
 	 */
-	private function resize($size)
+	protected function resize($size)
 	{
 		if ($size > $this->max_size) return false;
 		//should be called AFTER reading memory (to not loose changing of variables)
@@ -304,7 +305,7 @@ class mem
 	 * Synchronyze data with memory storage
 	 * @return bool|int
 	 */
-	private function refresh()
+	protected function refresh()
 	{
 		if ($this->readonly==true) return false;
 		ignore_user_abort(true);
@@ -330,7 +331,7 @@ class mem
 	 * Read data from memory storage
 	 * @return mixed
 	 */
-	private function readmemory()
+	protected function readmemory()
 	{
 		$this->mem = unserialize(trim(shmop_read($this->shm, 0, shmop_size($this->shm))));
 		if (is_array($this->mem))
@@ -342,8 +343,28 @@ class mem
 
 	public function get_stat()
 	{
-		$stat['shm'] = $this->shm;
-		$stat['shmkey'] = $this->shmkey;
+		$stat['shm_id'] = $this->shm;
+		$stat['shm_key'] = $this->shmkey;
+		$q_read = msg_get_queue($this->sem->getReadQKey());
+		if (!empty($q_read))
+		{
+			$q_stat = msg_stat_queue($q_read);
+			$stat['readers'] = $q_stat['msg_qnum'];
+			$stat['readers_qid'] = $this->sem->getReadQKey();
+		}
+		$q_writers = msg_get_queue($this->sem->getWriteQKey());
+		if (!empty($q_writers))
+		{
+			$q_stat = msg_stat_queue($q_writers);
+			$stat['writers'] = $q_stat['msg_qnum'];
+			$stat['writers_qid'] = $this->sem->getWriteQKey();
+		}
+		$mem = $this->read();
+		$stat['info'] = $mem['_info'];
+		$stat['size'] = strlen(serialize($mem));
+		$stat['max_size'] = shmop_size($this->shm);
+
+		$stat['err_log'] = array_merge($this->sem->getErrLog(), $this->errlog);
 		return $stat;
 	}
 }
