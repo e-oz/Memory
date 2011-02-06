@@ -4,7 +4,6 @@
  * @author OZ
  * @copyright 2010-2011
  * license MIT
- * test
  */
 
 if (!class_exists('MultiAccess')) include_once __DIR__.'/MultiAccess.inc';
