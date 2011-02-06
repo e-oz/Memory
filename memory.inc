@@ -14,6 +14,9 @@ class Key_AutoUnlocker extends autoUnlocker
 	public $key = '';
 }
 
+/**
+ * it will be wrappers, i suppose
+ */
 class Memory
 {
 	/** @var mem */
