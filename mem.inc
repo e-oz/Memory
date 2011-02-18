@@ -146,7 +146,7 @@ class mem
 		$this->sem->release_access_read($auto_unlocker);
 		if (empty($this->mem)) return false;
 		$arr = array();
-		foreach ($this->mem as $s)
+		foreach ($this->mem as &$s)
 		{
 			$matched = true;
 			foreach ($params as $p)

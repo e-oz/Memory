@@ -11,29 +11,23 @@ class MultiAccess
 	protected $writers_mutex;
 	protected $writers_count = 0;
 	protected $readers_count = 0;
+	protected $mutex_acquired = false;
 
 	const readers = 1;
 	const writers = 2;
-	const wait_time = 1;
+	const wait_time = 0.05;
 
-	public function get_access_read(&$auto_unlocker_reference = -1)
+	public function get_access_read(&$auto_unlocker_reference)
 	{
 		if (($this->writers_count <= 0) && ($this->readers_count <= 0)) //if it is nested call - access should be given only once
 		{
-			$this->wait(self::writers); //if somebody are writing here now - we will wait
+			if (!$this->wait(self::writers)) return false; //if somebody are writing here now - we will wait
 
-			$sent = $this->increment(); //increment count of readers - writers will be waiting for us while we read.
-			if ($sent===false)
-			{
-				$this->err_log[] = __METHOD__.': not incremented';
-				return false;
-			}
+			$sent = $this->increment(self::readers); //increment count of readers - writers will be waiting for us while we read.
+			if (!$sent) return false;
 		}
 
-		if ($auto_unlocker_reference!==-1)
-		{
-			$auto_unlocker_reference = new autoUnlocker(array($this, 'release_access_read'));
-		}
+		$auto_unlocker_reference = new autoUnlocker(array($this, 'release_access_read'));
 		$this->readers_count++;
 		return true;
 	}
@@ -42,45 +36,41 @@ class MultiAccess
 	{
 		if (!empty($autoUnlocker)) $autoUnlocker->revoke();
 		if ($this->readers_count > 0) $this->readers_count--;
-		if ($this->readers_count==0) $this->decrement(self::readers); //tell to writers, that we have read and they can write now
+		if ($this->readers_count <= 0) $this->decrement(self::readers); //tell to writers, that we have read and they can write now
 		return true;
 	}
 
-	public function get_access_write(&$auto_unlocker_reference = -1)
+	public function get_access_write(&$auto_unlocker_reference)
 	{
 		if ($this->writers_count <= 0) //if we are writers already - don't need to lock semaphore again
 		{
 			if ($this->readers_count > 0) //if we got reader's access and want to write - release our reader's access and got new access - writer's (else process will wait itself for a while)
 			{
-				while ($this->readers_count > 0) $this->release_access_read($auto_unlocker_reference);
+				$this->readers_count = 0;
+				$this->release_access_read($auto_unlocker_reference);
 			}
 
 			//acquire mutex for writing
-			if (empty($this->writers_mutex)) $this->writers_mutex = sem_get($this->writers_mutex_key, 1, 0777, 1);
-			if (empty($this->writers_mutex)) return false;
-			ignore_user_abort(true); //don't hang with semaphore, please :)
-			set_time_limit(3);
-			$starttime = microtime(true);
-			if (!sem_acquire($this->writers_mutex)) return false;
-			$acquire_time = microtime(true)-$starttime;
-			if ($acquire_time >= 1) $this->err_log[] = 'Acquire time: '.round($acquire_time, 4);
+			if (!$this->acquire_writers_mutex()) return false;
 
 			//tell to readers, that they should wait while we will write
 			//this action should be made before writer will wait for readers
 			$sent = $this->increment(self::writers); //after this command, readers will wait, until we will leave the queue
-			if ($sent===false)
+			if (!$sent)
 			{
-				$this->err_log[] = __METHOD__.': not incremented';
+				$this->release_writers_mutex();
 				return false;
 			}
+
 			//but if readers has come before us - wait, until they finish
-			$this->wait(self::readers);
+			if (!$this->wait(self::readers))
+			{
+				$this->release_writers_mutex();
+				return false;
+			}
 		}
 
-		if ($auto_unlocker_reference!==-1)
-		{
-			$auto_unlocker_reference = new autoUnlocker(array($this, 'release_access_write'));
-		}
+		$auto_unlocker_reference = new autoUnlocker(array($this, 'release_access_write'));
 		$this->writers_count++;
 		//and now we can write :)
 		return true;
@@ -90,13 +80,48 @@ class MultiAccess
 	{
 		if (!empty($autoUnlocker)) $autoUnlocker->revoke();
 		if ($this->writers_count > 0) $this->writers_count--;
-		if ($this->writers_count==0)
+		if ($this->writers_count <= 0)
 		{
 			$this->decrement(self::writers); //tell to readers, that they can read now
-			if (!empty($this->writers_mutex))
+			$this->release_writers_mutex();
+		}
+		return true;
+	}
+
+	/**
+	 * Returned value of this function should not be ignored.
+	 * 'False' means that access should not be granted.
+	 * @return bool
+	 */
+	protected function acquire_writers_mutex()
+	{
+		if (!$this->mutex_acquired)
+		{
+			if (empty($this->writers_mutex)) $this->writers_mutex = sem_get($this->writers_mutex_key, 1, 0777, 1);
+			if (empty($this->writers_mutex)) return false;
+			ignore_user_abort(true); //don't hang with semaphore, please :)
+			set_time_limit(3);
+			if (!sem_acquire($this->writers_mutex))
 			{
-				if (sem_release($this->writers_mutex)) unset($this->writers_mutex);
+				$this->err_log[] = 'Can not acquire writers mutex';
+				return false;
 			}
+			$this->mutex_acquired = true;
+		}
+		return true;
+	}
+
+	protected function release_writers_mutex()
+	{
+		if (!empty($this->writers_mutex))
+		{
+			if (sem_release($this->writers_mutex))
+			{
+				unset($this->writers_mutex);
+				$this->mutex_acquired = false;
+				return true;
+			}
+			else return false;
 		}
 		return true;
 	}
@@ -106,7 +131,13 @@ class MultiAccess
 		$q = $this->select_q($type);
 		if (empty($q)) return false;
 		$sent = msg_send($q, $type, $type, false, false, $err);
-		if ($sent==false) return false;
+		if ($sent==false)
+		{
+			$counter = $this->get_counter($type);
+			$this->err_log[] = 'Message was not sent to queue '.($type==self::readers ? 'readers '.$this->read_q_key : 'writers '.$this->write_q_key)
+							   .' counter: '.$counter.', error: '.$err;
+			return false;
+		}
 		return true;
 	}
 
@@ -115,7 +146,16 @@ class MultiAccess
 		$q = $this->select_q($type);
 		if (empty($q)) return false;
 		$recieve = msg_receive($q, $type, $t, 100, $msg, false, MSG_IPC_NOWAIT+MSG_NOERROR, $err);
-		if ($recieve===false) return false;
+		if ($recieve===false)
+		{
+			$counter = $this->get_counter($type);
+			if ($counter > 0)
+			{
+				$this->err_log[] = 'Message was not recieved from queue '.($type==self::readers ? 'readers '.$this->read_q_key : 'writers '.$this->write_q_key)
+								   .' counter: '.$counter.', error: '.$err;
+				return false;
+			}
+		}
 		return true;
 	}
 
@@ -126,33 +166,30 @@ class MultiAccess
 		return $stat['msg_qnum'];
 	}
 
+	/**
+	 * Wait for queue. If this function has returned 'false', access should not be granted.
+	 * @param int $type
+	 * @return bool
+	 */
 	protected function wait($type = self::writers)
 	{
 		$q = $this->select_q($type);
 		if (empty($q)) return false;
 
-		$starttime = time();
-		do
+		$stat = msg_stat_queue($q);
+		if ($stat['msg_qnum'] > 0)
 		{
-			$stat = msg_stat_queue($q);
-			if (empty($stat)) break;
-			if ($stat['msg_qnum'] <= 0) break;
-
-			if ((time()-$starttime) > self::wait_time)
+			$starttime = microtime(true);
+			do
 			{
-				$this->err_log[] = 'waiting for '.$type."\n".$this->printable_backtrace();
-				$loop2 = 0;
-				while ($stat['msg_qnum'] > 0)
-				{
-					$this->decrement($type);
-					$stat = msg_stat_queue($q);
-					$loop2++;
-					if ($loop2 > 1000) break;
-				}
-				break;
+				$stat = msg_stat_queue($q);
+				if (empty($stat)) break;
+				if ($stat['msg_qnum'] <= 0) break;
+
+				if ((microtime(true)-$starttime) > self::wait_time) return false;
 			}
+			while ($stat['msg_qnum'] > 0);
 		}
-		while ($stat['msg_qnum'] > 0);
 		return true;
 	}
 
@@ -191,49 +228,22 @@ class MultiAccess
 		if ($this->writers_count > 0)
 		{
 			$this->err_log[] = 'writers count = '.$this->writers_count;
-			while ($this->writers_count > 0) $this->release_access_write();
+			$this->writers_count = 0;
+			$this->release_access_write();
 		}
-		if (!empty($this->writers_mutex)) @sem_release($this->writers_mutex);
+		$this->release_writers_mutex();
 
 		if ($this->readers_count > 0)
 		{
 			$this->err_log[] = 'readers count = '.$this->readers_count;
-			while ($this->readers_count > 0) $this->release_access_read();
+			$this->readers_count = 0;
+			$this->release_access_read();
 		}
 
 		if (!empty($this->err_log))
 		{
-			trigger_error('MultiAccess errors '.implode("\n", $this->err_log), E_USER_WARNING);
+			MultiAccess_ErrorHandler::ReportError('MultiAccess errors '.implode("\n", $this->err_log));
 		}
-	}
-
-	protected function printable_backtrace()
-	{
-		$tmp = debug_backtrace();
-		array_shift($tmp);
-		$arr = array_reverse($tmp);
-		$str = '';
-		$space = $basespace = '|';
-		foreach ($arr as $t)
-		{
-			$str .= ' '.$space.$t['file']."\t[".$t['line']."]\t";
-			if (isset($t['class'])) $str .= $t['class'].$t['type'];
-			$str .= $t['function'];
-			if (isset($t['args'][0]))
-			{
-				$str .= '("';
-				foreach ($t['args'] as $t_arg)
-				{
-					if (!is_scalar($t_arg)) $str .= '[scalar],';
-					else  $str .= $t_arg.',';
-				}
-				$str .= '")';
-			}
-			else  $str .= '()';
-			$str .= "\n";
-			$space .= $basespace;
-		}
-		return rtrim($str);
 	}
 
 	public function getReadQKey()
@@ -255,7 +265,7 @@ interface IRevokable
 /** thanks to authors of RAII! */
 class autoUnlocker implements IRevokable
 {
-	protected $Unlock;
+	protected $Unlock = NULL;
 
 	/**
 	 * Register function to auto-unlock mutex
@@ -264,12 +274,13 @@ class autoUnlocker implements IRevokable
 	public function __construct($Unlock)
 	{
 		if (is_callable($Unlock)) $this->Unlock = $Unlock;
+		else MultiAccess_ErrorHandler::ReportError('Not callable parameter given');
 	}
 
 	/** Revoke auto-unlocking (if mutex unlocked was "manually") */
 	public function revoke()
 	{
-		unset($this->Unlock);
+		$this->Unlock = NULL;
 	}
 
 	/** Unlock mutex automatically */
@@ -277,5 +288,26 @@ class autoUnlocker implements IRevokable
 	{
 		if (isset($this->Unlock)) call_user_func($this->Unlock, $this);
 	}
+}
 
+class MultiAccess_ErrorHandler
+{
+	public static function ReportError($error)
+	{
+		if (!self::DisplayErrors()) trigger_error($error, E_USER_WARNING);
+	}
+
+	/**
+	 * If setting 'display_errors' is turned off, it's mean that error can be safely triggered (and handled by error handler, if necessary).
+	 * @static
+	 * @return bool
+	 */
+	public static function DisplayErrors()
+	{
+		static $display_errors;
+		if (!isset($display_errors)) $display_errors = ini_get('display_errors');
+
+		if (empty($display_errors)) return false;
+		else return true;
+	}
 }
