@@ -12,10 +12,10 @@ class MultiAccess
 	protected $writers_count = 0;
 	protected $readers_count = 0;
 	protected $mutex_acquired = false;
+	protected $max_wait_time = 0.05;
 
 	const readers = 1;
 	const writers = 2;
-	const wait_time = 0.05;
 
 	public function get_access_read(&$auto_unlocker_reference)
 	{
@@ -53,6 +53,9 @@ class MultiAccess
 			//acquire mutex for writing
 			if (!$this->acquire_writers_mutex()) return false;
 
+			//only 1 writer can send message to writers queue, so if in queue more than 1 message - it's somebody's error, and we will fix it now:
+			$this->clean_queue(self::writers);
+
 			//tell to readers, that they should wait while we will write
 			//this action should be made before writer will wait for readers
 			$sent = $this->increment(self::writers); //after this command, readers will wait, until we will leave the queue
@@ -65,6 +68,7 @@ class MultiAccess
 			//but if readers has come before us - wait, until they finish
 			if (!$this->wait(self::readers))
 			{
+				$this->decrement(self::writers);
 				$this->release_writers_mutex();
 				return false;
 			}
@@ -100,7 +104,7 @@ class MultiAccess
 			if (empty($this->writers_mutex)) $this->writers_mutex = sem_get($this->writers_mutex_key, 1, 0777, 1);
 			if (empty($this->writers_mutex)) return false;
 			ignore_user_abort(true); //don't hang with semaphore, please :)
-			set_time_limit(3);
+			set_time_limit(30);
 			if (!sem_acquire($this->writers_mutex))
 			{
 				$this->err_log[] = 'Can not acquire writers mutex';
@@ -124,6 +128,19 @@ class MultiAccess
 			else return false;
 		}
 		return true;
+	}
+
+	protected function clean_queue($type = self::writers)
+	{
+		$q = $this->select_q($type);
+		$stat = msg_stat_queue($q);
+		if ($stat['msg_qnum'] > 0)
+		{
+			for ($i = $stat['msg_qnum']; $i > 0; $i--)
+			{
+				msg_receive($q, $type, $t, 100, $msg, false, MSG_IPC_NOWAIT+MSG_NOERROR, $err);
+			}
+		}
 	}
 
 	protected function increment($type = self::readers)
@@ -186,7 +203,17 @@ class MultiAccess
 				if (empty($stat)) break;
 				if ($stat['msg_qnum'] <= 0) break;
 
-				if ((microtime(true)-$starttime) > self::wait_time) return false;
+				if ((microtime(true)-$starttime) > $this->max_wait_time)
+				{
+					if ($type==self::writers)
+					{
+						if (!$this->acquire_writers_mutex()) return false;
+						$this->clean_queue(self::writers);
+						$this->release_writers_mutex();
+						return true;
+					}
+					return false;
+				}
 			}
 			while ($stat['msg_qnum'] > 0);
 		}
@@ -254,6 +281,9 @@ class MultiAccess
 
 	public function getErrLog()
 	{ return $this->err_log; }
+
+	public function setMaxWaitTime($max_wait_time)
+	{ $this->max_wait_time = floatval($max_wait_time); }
 
 }
 
