@@ -353,14 +353,25 @@ class MemoryObject
 		$map[$k] = array(self::map_key_start => $start, self::map_key_fin => ($start+$size), self::map_key_ttl => $set_ttl, self::map_key_serialized => $data_serialized);
 		$r = $this->mem_object->save('map', $map);
 		if ($r===false) return false;
-		if (!empty($tags) && is_array($tags))
+		if (!empty($tags))
 		{
+			if (!is_array($tags))
+			{
+				if (is_scalar($tags)) $tags = array($tags);
+				else goto tags_if_end;
+			}
+			$tags_was_changed = false;
 			$mem_tags = $this->mem_object->read('tags');
 			foreach ($tags as $tag)
 			{
-				if (empty($mem_tags[$tag]) || !in_array($k, $mem_tags[$tag])) $mem_tags[$tag][] = $k;
+				if (empty($mem_tags[$tag]) || !in_array($k, $mem_tags[$tag]))
+				{
+					$mem_tags[$tag][] = $k;
+					$tags_was_changed = true;
+				}
 			}
-			$this->mem_object->save('tags', $mem_tags);
+			if ($tags_was_changed) $this->mem_object->save('tags', $mem_tags);
+			tags_if_end:
 		}
 		return true;
 	}
@@ -418,7 +429,7 @@ class MemoryObject
 	{
 
 		$auto_unlocker = NULL;
-		if (!$this->mutex->get_access_read($auto_unlocker)) return false;
+		if (!$this->mutex->get_access_read($auto_unlocker)) return NULL;
 		$map = $this->mem_object->read('map');
 		if (empty($map)) return NULL;
 		if (empty($k)) return $map;
@@ -481,10 +492,10 @@ class MemoryObject
 	 */
 	protected function read_data($from, $to, Array $keys = NULL)
 	{
-		if (!is_array($from) && is_array($to) && !empty($keys))
+		if (is_array($from) && is_array($to) && !empty($keys))
 		{
 			$i = 0;
-			$c = sizeof($from);
+			$c = count($from);
 			$data = array();
 			for (; $i < $c; $i++)
 			{
