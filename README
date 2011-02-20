@@ -1,9 +1,9 @@
 Shared Memory Cacher
 
 Key-value storage in shared memory.
+This branch will be extended by using APC as main cacher.
 
 Features:
-* Multiaccess - multiple readers, one writer
 * Tags for keys
 * Dog-pile and race-condition effects excluded
 
