@@ -59,7 +59,7 @@ interface IMemoryStorage
 
 class Memory
 {
-	/** @var MemoryObject */
+	/** @var APCObject */
 	private static $memory_object;
 
 	public static function getMemoryObject()
@@ -808,9 +808,11 @@ class APCObject implements IMemoryStorage
 	protected $prefix = 'K'; //because I love my wife Katya :)
 	protected $map_prefix;
 	protected $lock_key_prefix;
+	protected $defragmentation_prefix;
 
 	const map_prefix = '.map.';
 	const lock_key_prefix = '.lock_key.';
+	const defragmentation_prefix = '.clean.';
 	const max_ttl = 2592000;
 	const map_ttl = 'l';
 	const map_tags = 't';
@@ -821,12 +823,6 @@ class APCObject implements IMemoryStorage
 	 */
 	public function __construct($prefix = '')
 	{
-		if (!function_exists('apc_store'))
-		{
-			trigger_error('APC is not enabled.');
-			return false;
-		}
-
 		if (!empty($prefix))
 		{
 			$this->prefix = str_replace('.', '_', $prefix).'.';
@@ -834,6 +830,7 @@ class APCObject implements IMemoryStorage
 
 		$this->map_prefix = self::map_prefix.$prefix;
 		$this->lock_key_prefix = self::lock_key_prefix.$prefix;
+		$this->defragmentation_prefix = self::defragmentation_prefix.$prefix;
 	}
 
 	/**
@@ -887,11 +884,9 @@ class APCObject implements IMemoryStorage
 		if (empty($k)) return false;
 		if ($ttl > self::max_ttl) $ttl = self::max_ttl;
 
-		if (!apc_store($this->prefix.$k, $v, $ttl))
-		{
-			$this->del_old();
-			return false;
-		}
+		$this->del_old();
+
+		if (!apc_store($this->prefix.$k, $v, $ttl)) return false;
 
 		$this->map_save($k, $tags, $ttl, is_array($v));
 		return true;
@@ -952,19 +947,27 @@ class APCObject implements IMemoryStorage
 
 	/**
 	 * Delete old (by ttl) variables from storage
+	 * It's very important function to prevent APC's cache fragmentation.
 	 * @return boolean
 	 */
 	public function del_old(Array $with_keys = NULL)
 	{
-		$map = apc_fetch($this->map_prefix, $success);
-		if (!$success) return false;
 		$t = time();
-		$todel = array();
-		foreach ($map as $key => $m)
+		$prevous_clean = apc_fetch($this->defragmentation_prefix);
+		if (empty($prevous_clean) || ($t-$prevous_clean) > 1800)
 		{
-			if ($m[self::map_ttl] < $t) $todel[] = $key;
+			apc_store($this->defragmentation_prefix, $t, 1800);
+
+			$map = apc_fetch($this->map_prefix, $success);
+			if (!$success) return false;
+
+			$todel = array();
+			foreach ($map as $key => $m)
+			{
+				if ($m[self::map_ttl] > 0 && ($m[self::map_ttl] < $t)) $todel[] = $key;
+			}
+			if (!empty($todel)) $this->del($todel);
 		}
-		if (!empty($todel)) $this->del($todel);
 		return true;
 	}
 
@@ -1162,10 +1165,12 @@ class APCObject implements IMemoryStorage
 		if (!is_array($tags))
 		{
 			if (is_scalar($tags)) $tags = array($tags);
-			else $tags = array();
+			else $tags = null;
 		}
 
-		if ($ttl >= 0) $ttl = time()+$ttl;
+		if ($ttl > 0) $ttl = time()+$ttl;
+		elseif ($ttl < 0) $ttl = self::max_ttl;
+
 		if (!isset($map[$key])
 			|| ($ttl > 0 && $map[$key][self::map_ttl]!=$ttl)
 			|| $map[$key][self::map_tags]!=$tags
