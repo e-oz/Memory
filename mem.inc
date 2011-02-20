@@ -22,7 +22,7 @@ class mem
 	 * @param int $ttl
 	 * @return bool
 	 */
-	public function save($k, $v = '', $ttl = 0)
+	public function save($k, $v = '', $ttl = 2592000)
 	{
 		if ($this->readonly==true) return false;
 		$auto_unlocker = NULL;
@@ -105,7 +105,7 @@ class mem
 	 * @param int $ttl
 	 * @return bool|int
 	 */
-	public function add($key, $value, $ttl = 0)
+	public function add($key, $value, $ttl = 2592000)
 	{
 		if ($this->readonly==true) return false;
 		if (empty($key)) return false;
@@ -215,10 +215,10 @@ class mem
 	public function get($k)
 	{ return $this->read($k); }
 
-	public function set($k, $v, $ttl = 0)
+	public function set($k, $v, $ttl = 2592000)
 	{ return $this->save($k, $v, $ttl); }
 
-	public function write($k, $v, $ttl = 0)
+	public function write($k, $v, $ttl = 2592000)
 	{ return $this->save($k, $v, $ttl); }
 
 	public function remove($k)
@@ -372,7 +372,7 @@ class APCmem
 	 * @param int $ttl
 	 * @return bool
 	 */
-	public function save($k, $v = '', $ttl = 0)
+	public function save($k, $v = '', $ttl = 2592000)
 	{
 		return $this->apc->save($k, $v, $ttl);
 	}
@@ -404,7 +404,7 @@ class APCmem
 	 * @param int $ttl
 	 * @return bool|int
 	 */
-	public function add($key, $value, $ttl = 0)
+	public function add($key, $value, $ttl = 2592000)
 	{
 		return $this->apc->add($key, $value, $ttl);
 	}
@@ -436,10 +436,10 @@ class APCmem
 	public function get($k)
 	{ return $this->read($k); }
 
-	public function set($k, $v, $ttl = 0)
+	public function set($k, $v, $ttl = 2592000)
 	{ return $this->save($k, $v, $ttl); }
 
-	public function write($k, $v, $ttl = 0)
+	public function write($k, $v, $ttl = 2592000)
 	{ return $this->save($k, $v, $ttl); }
 
 	public function remove($k)
