@@ -931,11 +931,8 @@ class APCObject implements IMemoryStorage
 		if (empty($k)) return false;
 		if (is_array($k))
 		{
-			foreach ($k as $key)
-			{
-				$this->map_delete($key);
-				apc_delete($this->prefix.$key);
-			}
+			foreach ($k as $key) apc_delete($this->prefix.$key);
+			$this->map_delete($k);
 			return true;
 		}
 		else
@@ -982,6 +979,7 @@ class APCObject implements IMemoryStorage
 		if (!is_array($tags)) $tags = array($tags);
 		$map = apc_fetch($this->map_prefix, $success);
 		if (!$success) return false;
+		$todel = array();
 		foreach ($map as $key => $k)
 		{
 			if (!empty($k[self::map_tags]))
@@ -990,12 +988,13 @@ class APCObject implements IMemoryStorage
 				{
 					if (in_array($tag, $k[self::map_tags]))
 					{
-						$this->del($key);
+						$todel[] = $key;
 						break;
 					}
 				}
 			}
 		}
+		if (!empty($todel)) $this->del($todel);
 		return true;
 	}
 
@@ -1187,14 +1186,18 @@ class APCObject implements IMemoryStorage
 		return true;
 	}
 
-	protected function map_delete($key)
+	protected function map_delete($keys)
 	{
+		if (!is_array($keys)) $keys = array($keys);
 		$map = apc_fetch($this->map_prefix, $success);
 		if (!$success) return false;
-		if (isset($map[$key]))
+		foreach ($keys as $key)
 		{
-			unset($map[$key]);
-			return apc_store($this->map_prefix, $map);
+			if (isset($map[$key]))
+			{
+				unset($map[$key]);
+				return apc_store($this->map_prefix, $map);
+			}
 		}
 		return true;
 	}
