@@ -887,9 +887,13 @@ class APCObject implements IMemoryStorage
 		if (empty($k)) return false;
 		if ($ttl > self::max_ttl) $ttl = self::max_ttl;
 
-		if (!apc_store($this->prefix.$k, $v, $ttl)) return false;
+		if (!apc_store($this->prefix.$k, $v, $ttl))
+		{
+			$this->del_old();
+			return false;
+		}
 
-		$this->map_save($k, $tags, $ttl);
+		$this->map_save($k, $tags, $ttl, is_array($v));
 		return true;
 	}
 
@@ -947,11 +951,20 @@ class APCObject implements IMemoryStorage
 	}
 
 	/**
-	 * This function exists for compatibility
+	 * Delete old (by ttl) variables from storage
 	 * @return boolean
 	 */
 	public function del_old(Array $with_keys = NULL)
 	{
+		$map = apc_fetch($this->map_prefix, $success);
+		if (!$success) return false;
+		$t = time();
+		$todel = array();
+		foreach ($map as $key => $m)
+		{
+			if ($m[self::map_ttl] < $t) $todel[] = $key;
+		}
+		if (!empty($todel)) $this->del($todel);
 		return true;
 	}
 
@@ -1143,7 +1156,7 @@ class APCObject implements IMemoryStorage
 	 * @param string|array $tags
 	 * @return bool
 	 */
-	protected function map_save($key, $tags = null, $ttl = -1, $is_array = false)
+	protected function map_save($key, $tags, $ttl = -1, $is_array = null)
 	{
 		$map = apc_fetch($this->map_prefix);
 		if (!is_array($tags))
@@ -1156,8 +1169,13 @@ class APCObject implements IMemoryStorage
 		if (!isset($map[$key])
 			|| ($ttl > 0 && $map[$key][self::map_ttl]!=$ttl)
 			|| $map[$key][self::map_tags]!=$tags
-			|| $map[$key][self::map_array]!=$is_array)
+			|| (is_bool($is_array) && $map[$key][self::map_array]!=$is_array))
 		{
+			if (isset($map[$key]))
+			{
+				if (!is_bool($is_array)) $is_array = $map[$key][self::map_array];
+				if ($ttl < time()) $ttl = $map[$key][self::map_ttl];
+			}
 			$map[$key] = array(self::map_ttl => $ttl, self::map_tags => $tags, self::map_array => $is_array);
 			return apc_store($this->map_prefix, $map);
 		}
