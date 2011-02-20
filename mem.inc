@@ -13,7 +13,6 @@ class mem
 	protected $shmkey = 0;
 	protected $shm = 0;
 
-	protected $ini = false;
 	protected $readonly = false;
 
 	/**
@@ -57,8 +56,6 @@ class mem
 	 */
 	public function read($k = '')
 	{
-		if (!$this->ini) $this->ini();
-		if (!$this->ini) return false;
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_read($auto_unlocker)) return false;
 		$this->readmemory();
@@ -92,8 +89,6 @@ class mem
 	 */
 	public function del($k)
 	{
-		if (!$this->ini) $this->ini();
-		if (!$this->ini) return false;
 		if ($this->readonly==true) return false;
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker)) return false;
@@ -137,8 +132,6 @@ class mem
 	 */
 	public function select($params, $get_array = false)
 	{
-		if (!$this->ini) $this->ini();
-		if (!$this->ini) return false;
 		if (!is_array($params)) return false;
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_read($auto_unlocker)) return false;
@@ -202,8 +195,6 @@ class mem
 	 */
 	public function select_fx($fx, $get_array = false)
 	{
-		if (!$this->ini) $this->ini();
-		if (!$this->ini) return false;
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_read($auto_unlocker)) return false;
 		$this->readmemory();
@@ -252,7 +243,6 @@ class mem
 	/** Initialization */
 	public function ini($id = '', $size = 0, $maxsize = 0)
 	{
-		if ($this->ini==true) return true;
 		if (!empty($id)) $this->id = $id;
 		if (!empty($size)) $this->shmsize = $size;
 		if (!empty($maxsize) && $maxsize > $this->shmsize) $this->max_size = $maxsize;
@@ -268,7 +258,6 @@ class mem
 		if (!$this->shm) $this->shm = shmop_open($this->shmkey, "n", 0777, $this->shmsize);
 		if (!$this->shm) return false;
 		$this->sem = new MultiAccess($this->id);
-		$this->ini = true;
 		return true;
 	}
 
@@ -302,7 +291,7 @@ class mem
 	}
 
 	/**
-	 * Synchronyze data with memory storage
+	 * Synchronize data with memory storage
 	 * @return bool|int
 	 */
 	protected function refresh()
@@ -366,5 +355,103 @@ class mem
 
 		$stat['err_log'] = array_merge($this->sem->getErrLog(), $this->errlog);
 		return $stat;
+	}
+}
+
+class APCmem
+{
+	protected $prefix = 'Kmem';
+	protected $errlog = array();
+	/** @var APCObject */
+	protected $apc;
+
+	/**
+	 * Save key-value in memory.
+	 * @param string|array $k (can be string or array of key=>value)
+	 * @param mixed $v
+	 * @param int $ttl
+	 * @return bool
+	 */
+	public function save($k, $v = '', $ttl = 0)
+	{
+		return $this->apc->save($k, $v, $ttl);
+	}
+
+	/**
+	 * Read key value from memory
+	 * @param string|array $k
+	 * @return mixed
+	 */
+	public function read($k = '')
+	{
+		return $this->apc->read($k);
+	}
+
+	/**
+	 * Delete key from memory
+	 * @param string $k
+	 * @return bool
+	 */
+	public function del($k)
+	{
+		return $this->apc->del($k);
+	}
+
+	/** Add key to memory. If this key already exists - false will returned.
+	 * Excludes simultaneously adding keys to exclude race condition.
+	 * @param string $key
+	 * @param mixed $value
+	 * @param int $ttl
+	 * @return bool|int
+	 */
+	public function add($key, $value, $ttl = 0)
+	{
+		return $this->apc->add($key, $value, $ttl);
+	}
+
+	/**
+	 * Select from memory elements, where element[$k] in relation $r with value $v
+	 * $k,$r and $v given in array $params
+	 * if $get_array - return array of matched elements, else - first element.
+	 * @param array $params
+	 * @param bool $get_array
+	 * @return mixed
+	 */
+	public function select($params, $get_array = false)
+	{
+		return $this->apc->select($params, $get_array);
+	}
+
+	/**
+	 * Select from memory elements by function $fx
+	 * @param callback $fx
+	 * @param bool $get_array
+	 * @return mixed
+	 */
+	public function select_fx($fx, $get_array = false)
+	{
+		return $this->apc->select_fx($fx, $get_array);
+	}
+
+	public function get($k)
+	{ return $this->read($k); }
+
+	public function set($k, $v, $ttl = 0)
+	{ return $this->save($k, $v, $ttl); }
+
+	public function write($k, $v, $ttl = 0)
+	{ return $this->save($k, $v, $ttl); }
+
+	public function remove($k)
+	{ return $this->del($k); }
+
+	public function __construct($prefix = '')
+	{
+		if (!empty($prefix)) $this->prefix = $prefix;
+		$this->apc = new APCObject($this->prefix);
+	}
+
+	public function get_stat()
+	{
 	}
 }

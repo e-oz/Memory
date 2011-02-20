@@ -915,7 +915,7 @@ class APCObject implements IMemoryStorage
 			if ($ttl_left!=-1)
 			{
 				$map = apc_fetch($this->map_prefix);
-				if (isset($map[$k][self::map_ttl])) $ttl_left = time()-$map[$k][self::map_ttl];
+				if (isset($map[$k][self::map_ttl])) $ttl_left = $map[$k][self::map_ttl]-time();
 				else $ttl_left = self::max_ttl;
 			}
 		}
@@ -964,7 +964,8 @@ class APCObject implements IMemoryStorage
 	public function del_by_tags($tags)
 	{
 		if (!is_array($tags)) $tags = array($tags);
-		$map = apc_fetch($this->map_prefix);
+		$map = apc_fetch($this->map_prefix, $success);
+		if (!$success) return false;
 		foreach ($map as $key => $k)
 		{
 			if (!empty($k[self::map_tags]))
@@ -993,7 +994,9 @@ class APCObject implements IMemoryStorage
 	public function select($params, $get_array = false)
 	{
 		$arr = array();
-		$map = apc_fetch($this->map_prefix);
+		$map = apc_fetch($this->map_prefix, $success);
+		if (!$success) return false;
+
 		foreach ($map as $key => &$zs)
 		{
 			if (!$zs[self::map_array]) continue;
@@ -1054,7 +1057,9 @@ class APCObject implements IMemoryStorage
 	 */
 	public function select_fx($fx, $get_array = false)
 	{
-		$map = apc_fetch($this->map_prefix);
+		$map = apc_fetch($this->map_prefix, $success);
+		if (!$success) return false;
+
 		$arr = array();
 		foreach ($map as $index => &$zs)
 		{
@@ -1085,9 +1090,13 @@ class APCObject implements IMemoryStorage
 		{
 			return $this->save($key, $by_value);
 		}
-		if (is_numeric($value) && is_numeric($by_value)) $value += $by_value;
-		else $value .= $by_value;
-		return $this->save($key, $value);
+		if (is_numeric($value) && is_numeric($by_value)) return apc_inc($this->prefix.$key, $by_value);
+		else
+		{
+			$value .= $by_value;
+			return $this->save($key, $value);
+		}
+
 	}
 
 	public function get_stat()
@@ -1108,7 +1117,7 @@ class APCObject implements IMemoryStorage
 	 */
 	public function lock_key($key, &$auto_unlocker_variable)
 	{
-		$r = apc_store($this->lock_key_prefix.$key, 1, 30);
+		$r = apc_add($this->lock_key_prefix.$key, 1, 30);
 		if (!$r) return false;
 		$auto_unlocker_variable = new Key_AutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
@@ -1136,8 +1145,7 @@ class APCObject implements IMemoryStorage
 	 */
 	protected function map_save($key, $tags = null, $ttl = -1, $is_array = false)
 	{
-		$map = apc_fetch($this->map_prefix, $success);
-		if (!$success) return false;
+		$map = apc_fetch($this->map_prefix);
 		if (!is_array($tags))
 		{
 			if (is_scalar($tags)) $tags = array($tags);
@@ -1159,6 +1167,7 @@ class APCObject implements IMemoryStorage
 	protected function map_delete($key)
 	{
 		$map = apc_fetch($this->map_prefix, $success);
+		if (!$success) return false;
 		if (isset($map[$key]))
 		{
 			unset($map[$key]);
