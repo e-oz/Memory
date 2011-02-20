@@ -1,21 +1,20 @@
 Shared Memory Cacher
 
 Key-value storage in shared memory.
-Works faster than big key-value storages, as Memcache or Redis, but can use memory of 1 server only.
 
 Features:
 * Multiaccess - multiple readers, one writer
 * Tags for keys
 * Dog-pile and race-condition effects excluded
 
-Class MultiAccess can be used separately too.
+Class MultiAccess can be used separately for other tasks.
 
-PHP version: 5.3 (replace __DIR__ to dirname(__FILE__) for 5.2)
+PHP version: 5.3
 PHP should support shm-functions and msg-functions (--enable-shmop --enable-sysvsem --enable-sysvshm --enable-sysvmsg)
 
 Tested in working project since June 2010.
 
-Look at cooments for info. Ask, what you want to see commented.
+Look at comments for info. Ask, what you want to see commented.
 
 License: MIT
 

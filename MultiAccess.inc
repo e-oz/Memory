@@ -203,17 +203,7 @@ class MultiAccess
 				if (empty($stat)) break;
 				if ($stat['msg_qnum'] <= 0) break;
 
-				if ((microtime(true)-$starttime) > $this->max_wait_time)
-				{
-					if ($type==self::writers)
-					{
-						if (!$this->acquire_writers_mutex()) return false;
-						$this->clean_queue(self::writers);
-						$this->release_writers_mutex();
-						return true;
-					}
-					return false;
-				}
+				if ((microtime(true)-$starttime) > $this->max_wait_time) return false;
 			}
 			while ($stat['msg_qnum'] > 0);
 		}
