@@ -895,11 +895,11 @@ class APCObject implements IMemoryStorage
 		if (empty($k)) return NULL;
 		if (is_array($k))
 		{
-			$toget = array();
 			$data = array();
-			foreach ($k as $key) $toget[] = $this->prefix.$key;
-			$toget = apc_exists($toget);
-			if (!empty($toget)) $data = apc_fetch($toget);
+			foreach ($k as $key)
+			{
+				if (apc_exists($this->prefix.$key)) $data[$key] = apc_fetch($this->prefix.$key);
+			}
 		}
 		else
 		{
