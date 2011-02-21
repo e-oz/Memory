@@ -896,11 +896,14 @@ class APCObject implements IMemoryStorage
 		if (is_array($k))
 		{
 			$toget = array();
+			$data = array();
 			foreach ($k as $key) $toget[] = $this->prefix.$key;
-			$data = apc_fetch($toget);
+			$toget = apc_exists($toget);
+			if (!empty($toget)) $data = apc_fetch($toget);
 		}
 		else
 		{
+			if (!apc_exists($this->prefix.$k)) return false;
 			$data = apc_fetch($this->prefix.$k, $success);
 			if (!$success) return false;
 			if ($ttl_left!=-1)
@@ -951,11 +954,17 @@ class APCObject implements IMemoryStorage
 			if (!$success) return false;
 
 			$todel = array();
+			$todelmap = array();
 			foreach ($map as $key => $m)
 			{
-				if ($m[self::map_ttl] > 0 && ($m[self::map_ttl] < $t)) $todel[] = $key;
+				if (!apc_exists($this->prefix.$key)) $todelmap[] = $key;
+				else
+				{
+					if ($m[self::map_ttl] > 0 && ($m[self::map_ttl] < $t)) $todel[] = $key;
+				}
 			}
 			if (!empty($todel)) $this->del($todel);
+			if (!empty($todelmap)) $this->map_delete($todelmap);
 		}
 		return true;
 	}
@@ -1048,7 +1057,7 @@ class APCObject implements IMemoryStorage
 			if ($matched==true)
 			{
 				if (!$get_array) return $s;
-				else $arr[] = $s;
+				else $arr[$key] = $s;
 			}
 		}
 		if (!$get_array || empty($arr)) return false;
