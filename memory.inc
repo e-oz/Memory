@@ -50,8 +50,6 @@ interface IMemoryStorage
 
 	public function increment($key, $by_value = 1);
 
-	public function get_stat();
-
 	public function lock_key($key, &$auto_unlocker_variable);
 
 	public function unlock_key(Key_AutoUnlocker $auto_unlocker);
@@ -836,6 +834,7 @@ class APCObject implements IMemoryStorage
 	public function add($k, $v, $ttl = 259200, $tags = NULL)
 	{
 		if (empty($k) || $v==NULL) return false;
+		$ttl = intval($ttl);
 		if ($ttl > self::max_ttl) $ttl = self::max_ttl;
 
 		$add = apc_add($this->prefix.$k, $v, $ttl);
@@ -873,6 +872,7 @@ class APCObject implements IMemoryStorage
 	public function save($k, $v, $ttl = 259200, $tags = NULL)
 	{
 		if (empty($k)) return false;
+		$ttl = intval($ttl);
 		if ($ttl > self::max_ttl) $ttl = self::max_ttl;
 
 		$this->del_old();
@@ -906,7 +906,7 @@ class APCObject implements IMemoryStorage
 			if (!apc_exists($this->prefix.$k)) return false;
 			$data = apc_fetch($this->prefix.$k, $success);
 			if (!$success) return false;
-			if ($ttl_left!=-1)
+			if ($ttl_left!==-1)
 			{
 				$map = apc_fetch($this->map_prefix);
 				if (!empty($map[$k][self::map_ttl])) $ttl_left = $map[$k][self::map_ttl]-time();
@@ -942,13 +942,22 @@ class APCObject implements IMemoryStorage
 	 * It's very important function to prevent APC's cache fragmentation.
 	 * @return boolean
 	 */
-	public function del_old(Array $with_keys = NULL)
+	public function del_old(Array $with_keys = NULL, $force_refresh = false)
 	{
 		$t = time();
-		$previous_clean = apc_fetch($this->defragmentation_prefix);
-		if (empty($previous_clean) || ($t-$previous_clean) > 1800)
+		$this->del($with_keys);
+		if ($force_refresh) $previous_cleaning = 0;
+		else $previous_cleaning = apc_fetch($this->defragmentation_prefix);
+		if (empty($previous_cleaning) || ($t-$previous_cleaning) > 1800)
 		{
 			apc_store($this->defragmentation_prefix, $t, 1800);
+
+			//Delete all expired entries in the APC user's cache
+			$i = new APCIterator('user', null, APC_ITER_TTL+APC_ITER_KEY+APC_ITER_CTIME);
+			foreach ($i as $key)
+			{
+				if ($key['ttl'] > 0 && ($t-$key['creation_time']) > $key['ttl']) apc_delete($key['key']);
+			}
 
 			$map = apc_fetch($this->map_prefix, $success);
 			if (!$success) return false;
@@ -1067,7 +1076,7 @@ class APCObject implements IMemoryStorage
 	/**
 	 * Select from storage via callback function
 	 *
-	 * @param callback $fx
+	 * @param callback $fx ($value_array,$key)
 	 * @param bool $get_array
 	 * @return mixed
 	 */
@@ -1168,6 +1177,7 @@ class APCObject implements IMemoryStorage
 			else $tags = null;
 		}
 
+		$ttl = intval($ttl);
 		if ($ttl > 0) $ttl = time()+$ttl;
 
 		if (isset($map[$key]))
@@ -1188,7 +1198,7 @@ class APCObject implements IMemoryStorage
 
 		if ($old!=$map[$key])
 		{
-			return apc_store($this->map_prefix, $map);
+			return apc_store($this->map_prefix, $map, self::max_ttl);
 		}
 		return true;
 	}
@@ -1199,6 +1209,6 @@ class APCObject implements IMemoryStorage
 		$map = apc_fetch($this->map_prefix, $success);
 		if (!$success) return false;
 		foreach ($keys as $key) unset($map[$key]);
-		return apc_store($this->map_prefix, $map);
+		return apc_store($this->map_prefix, $map, self::max_ttl);
 	}
 }
