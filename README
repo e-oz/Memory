@@ -1,18 +1,16 @@
 Shared Memory Cacher
 
 Key-value storage in shared memory.
-This branch will be extended by using APC as main cacher.
+This branch extended by using APC as main cacher.
+It's faster and full compatible with previous variant.
 
 Features:
 * Tags for keys
 * Dog-pile and race-condition effects excluded
 
-Class MultiAccess can be used separately for other tasks.
-
 PHP version: 5.3
-PHP should support shm-functions and msg-functions (--enable-shmop --enable-sysvsem --enable-sysvshm --enable-sysvmsg)
-
-Tested in working project since June 2010.
+APC should be installed.
+http://pecl.php.net/package/APC
 
 Look at comments for info. Ask, what you want to see commented.
 
