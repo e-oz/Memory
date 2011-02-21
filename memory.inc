@@ -895,8 +895,9 @@ class APCObject implements IMemoryStorage
 		if (empty($k)) return NULL;
 		if (is_array($k))
 		{
-			$data = array();
-			foreach ($k as $key) $data[$key] = apc_fetch($this->prefix.$key);
+			$toget = array();
+			foreach ($k as $key) $toget[] = $this->prefix.$key;
+			$data = apc_fetch($toget);
 		}
 		else
 		{
@@ -920,15 +921,15 @@ class APCObject implements IMemoryStorage
 	public function del($k)
 	{
 		if (empty($k)) return false;
+		$this->map_delete($k);
 		if (is_array($k))
 		{
-			foreach ($k as $key) apc_delete($this->prefix.$key);
-			$this->map_delete($k);
-			return true;
+			$todel = array();
+			foreach ($k as $key) $todel[] = $this->prefix.$key;
+			return apc_delete($todel);
 		}
 		else
 		{
-			$this->map_delete($k);
 			return apc_delete($this->prefix.$k);
 		}
 	}
@@ -941,8 +942,8 @@ class APCObject implements IMemoryStorage
 	public function del_old(Array $with_keys = NULL)
 	{
 		$t = time();
-		$prevous_clean = apc_fetch($this->defragmentation_prefix);
-		if (empty($prevous_clean) || ($t-$prevous_clean) > 1800)
+		$previous_clean = apc_fetch($this->defragmentation_prefix);
+		if (empty($previous_clean) || ($t-$previous_clean) > 1800)
 		{
 			apc_store($this->defragmentation_prefix, $t, 1800);
 
@@ -1188,14 +1189,7 @@ class APCObject implements IMemoryStorage
 		if (!is_array($keys)) $keys = array($keys);
 		$map = apc_fetch($this->map_prefix, $success);
 		if (!$success) return false;
-		foreach ($keys as $key)
-		{
-			if (isset($map[$key]))
-			{
-				unset($map[$key]);
-				return apc_store($this->map_prefix, $map);
-			}
-		}
-		return true;
+		foreach ($keys as $key) unset($map[$key]);
+		return apc_store($this->map_prefix, $map);
 	}
 }
