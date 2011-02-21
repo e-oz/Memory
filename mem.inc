@@ -372,9 +372,9 @@ class APCmem
 	 * @param int $ttl
 	 * @return bool
 	 */
-	public function save($k, $v = '', $ttl = 2592000)
+	public function save($k, $v = '', $ttl = 2592000, $tags = null)
 	{
-		return $this->apc->save($k, $v, $ttl);
+		return $this->apc->save($k, $v, $ttl, $tags);
 	}
 
 	/**

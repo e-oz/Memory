@@ -357,7 +357,6 @@ class MemoryObject implements IMemoryStorage
 	 */
 	public function save($k, $v, $ttl = 259200, $tags = NULL)
 	{
-
 		if (empty($k) || $v===NULL) return false;
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker)) return false;
@@ -470,7 +469,6 @@ class MemoryObject implements IMemoryStorage
 	 */
 	public function read($k = NULL, &$ttl_left = -1)
 	{
-
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_read($auto_unlocker)) return NULL;
 		$map = $this->mem_object->read('map');
@@ -557,7 +555,6 @@ class MemoryObject implements IMemoryStorage
 	 */
 	public function del($k)
 	{
-
 		if ($k==NULL || $k=='') return false;
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker)) return false;
@@ -579,7 +576,6 @@ class MemoryObject implements IMemoryStorage
 	 */
 	public function del_old(Array $with_keys = NULL)
 	{
-
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker)) return false;
 		$r = 0;
@@ -602,7 +598,6 @@ class MemoryObject implements IMemoryStorage
 	 */
 	public function del_by_tags($tag)
 	{
-
 		if (empty($tag)) return false;
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker)) return false;
@@ -627,7 +622,6 @@ class MemoryObject implements IMemoryStorage
 	 */
 	public function select($params, $get_array = false)
 	{
-
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_read($auto_unlocker)) return false;
 		$map = $this->mem_object->read('map');
@@ -692,7 +686,6 @@ class MemoryObject implements IMemoryStorage
 	 */
 	public function select_fx($fx, $get_array = false)
 	{
-
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_read($auto_unlocker)) return false;
 		$map = $this->mem_object->read('map');
@@ -721,7 +714,6 @@ class MemoryObject implements IMemoryStorage
 	 */
 	public function increment($key, $by_value = 1)
 	{
-
 		if (empty($key)) return false;
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker)) return false;
@@ -739,7 +731,6 @@ class MemoryObject implements IMemoryStorage
 
 	public function get_stat()
 	{
-
 		$stat = array();
 		$map = $this->mem_object->read('map');
 		$size = 0;
@@ -914,7 +905,7 @@ class APCObject implements IMemoryStorage
 			if ($ttl_left!=-1)
 			{
 				$map = apc_fetch($this->map_prefix);
-				if (isset($map[$k][self::map_ttl])) $ttl_left = $map[$k][self::map_ttl]-time();
+				if (!empty($map[$k][self::map_ttl])) $ttl_left = $map[$k][self::map_ttl]-time();
 				else $ttl_left = self::max_ttl;
 			}
 		}
@@ -1014,7 +1005,7 @@ class APCObject implements IMemoryStorage
 
 		foreach ($map as $key => &$zs)
 		{
-			if (!$zs[self::map_array]) continue;
+			if (empty($zs[self::map_array])) continue;
 			$s = $this->read($key);
 			if (empty($s)) continue;
 			$matched = true;
@@ -1078,7 +1069,7 @@ class APCObject implements IMemoryStorage
 		$arr = array();
 		foreach ($map as $index => &$zs)
 		{
-			if (!$zs[self::map_array]) continue;
+			if (empty($zs[self::map_array])) continue;
 			$s = $this->read($index);
 			if (empty($s)) continue;
 			if ($fx($s, $index)===true)
@@ -1168,19 +1159,25 @@ class APCObject implements IMemoryStorage
 		}
 
 		if ($ttl > 0) $ttl = time()+$ttl;
-		elseif ($ttl < 0) $ttl = self::max_ttl;
 
-		if (!isset($map[$key])
-			|| ($ttl > 0 && $map[$key][self::map_ttl]!=$ttl)
-			|| $map[$key][self::map_tags]!=$tags
-			|| (is_bool($is_array) && $map[$key][self::map_array]!=$is_array))
+		if (isset($map[$key]))
 		{
-			if (isset($map[$key]))
-			{
-				if (!is_bool($is_array)) $is_array = $map[$key][self::map_array];
-				if ($ttl < time()) $ttl = $map[$key][self::map_ttl];
-			}
-			$map[$key] = array(self::map_ttl => $ttl, self::map_tags => $tags, self::map_array => $is_array);
+			$old = $map[$key];
+			if (!is_bool($is_array)) $is_array = $map[$key][self::map_array];
+			if ($ttl < 0) $ttl = $map[$key][self::map_ttl];
+		}
+		else
+		{
+			$old = array();
+			if ($ttl < 0) $ttl = self::max_ttl;
+		}
+
+		$map[$key] = array(self::map_ttl => $ttl);
+		if (!empty($tags)) $map[$key][self::map_tags] = $tags;
+		if (!empty($is_array)) $map[$key][self::map_array] = $is_array;
+
+		if ($old!=$map[$key])
+		{
 			return apc_store($this->map_prefix, $map);
 		}
 		return true;
