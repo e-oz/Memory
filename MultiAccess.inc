@@ -1,6 +1,17 @@
 <?php
 
-class MultiAccess
+interface IMutex
+{
+	public function get_access_read(&$auto_unlocker_reference);
+
+	public function release_access_read(IRevokable $autoUnlocker = NULL);
+
+	public function get_access_write(&$auto_unlocker_reference);
+
+	public function release_access_write(IRevokable $autoUnlocker = NULL);
+}
+
+class MultiAccess implements IMutex
 {
 	protected $read_q_key = 1;
 	protected $write_q_key = 2;
