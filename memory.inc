@@ -925,9 +925,9 @@ class APCObject implements IMemoryStorage
 			$this->prefix = str_replace('.', '_', $prefix).'.';
 		}
 
-		$this->map_prefix = self::map_prefix.$prefix;
-		$this->lock_key_prefix = self::lock_key_prefix.$prefix;
-		$this->defragmentation_prefix = self::defragmentation_prefix.$prefix;
+		$this->map_prefix = self::map_prefix.$this->prefix;
+		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
+		$this->defragmentation_prefix = self::defragmentation_prefix.$this->prefix;
 	}
 
 	/**
