@@ -135,26 +135,26 @@ class MemoryObject_Test
 		$results[] = $result = new TestResult(__METHOD__.' call1 (add)');
 		$this->mem->del('t1');
 		$call1 = $this->mem->add('t1', 1);
-		$result->Expected(true)->Result($call1);
+		$result->Expected(true)->Result($call1)->addDescription($this->mem->getLastErr());
 
 		$results[] = $result = new TestResult(__METHOD__.' call2 (replace)');
 		$call2 = $this->mem->add('t1', 2);
-		$result->Expected(false)->Result($call2);
+		$result->Expected(false)->Result($call2)->addDescription($this->mem->getLastErr());
 
 		$results[] = $result = new TestResult(__METHOD__.' call3 (ttl)');
 		$this->mem->del('t3');
 		$call3 = $this->mem->add('t3', 3, 10);
-		$result->Expected(true)->Result($call3);
+		$result->Expected(true)->Result($call3)->addDescription($this->mem->getLastErr());
 
 		$results[] = $result = new TestResult(__METHOD__.' call4 (tags string)');
 		$this->mem->del('t4');
 		$call = $this->mem->add('t4', 1, 10, 'tag');
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 
 		$results[] = $result = new TestResult(__METHOD__.' call4 (tags array)');
 		$this->mem->del('t5');
 		$call = $this->mem->add('t5', 1, 10, array('tag1', 'tag2'));
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 
 		return $results;
 	}
@@ -166,7 +166,7 @@ class MemoryObject_Test
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$this->mem->add(__METHOD__.'d1', 1);
 		$call = $this->mem->del(__METHOD__.'d1');
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'d1');
 		if (!empty($check)) $result->Fail()->addDescription('variables still in cache');
 
@@ -174,7 +174,7 @@ class MemoryObject_Test
 		$this->mem->add(__METHOD__.'d1', 1);
 		$this->mem->add(__METHOD__.'d2', 1);
 		$call = $this->mem->del(array(__METHOD__.'d1', __METHOD__.'d2'));
-		$result->Expected(array())->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(array(__METHOD__.'d1', __METHOD__.'d2'));
 		if (!empty($check)) $result->Fail()->addDescription('variables still in cache');
 
@@ -188,7 +188,7 @@ class MemoryObject_Test
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$this->mem->add(__METHOD__.'d1', 1, 10, 'tag');
 		$call = $this->mem->del_by_tags('tag');
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'d1');
 		if (!empty($check)) $result->Fail()->addDescription('variables still in cache');
 
@@ -196,7 +196,7 @@ class MemoryObject_Test
 		$this->mem->add(__METHOD__.'d1', 1, 10, 'tag1');
 		$this->mem->add(__METHOD__.'d2', 1, 10, 'tag2');
 		$call = $this->mem->del_by_tags(array('tag1', 'tag2'));
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(array(__METHOD__.'d1', __METHOD__.'d2'));
 		if (!empty($check)) $result->Fail()->addDescription('variables still in cache');
 
@@ -211,7 +211,7 @@ class MemoryObject_Test
 		$this->mem->save(__METHOD__, 11, 1);
 		sleep(2);
 		$call = $this->mem->del_old(null, true);
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__);
 		if (!empty($check)) $result->Fail()->addDescription('variable still exists');
 
@@ -225,22 +225,19 @@ class MemoryObject_Test
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$this->mem->save(__METHOD__, 100);
 		$call = $this->mem->increment(__METHOD__, 10);
-		$result->Expected(true)->Result($call);
 		$check = $this->mem->read(__METHOD__);
-		if ($check!=110) $result->Fail()->addDescription('value are wrong');
+		$result->Expected(array(true, 110))->Result(array($call, $check));
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->increment(__METHOD__, -10);
-		$result->Expected(true)->Result($call);
 		$check = $this->mem->read(__METHOD__);
-		if ($check!=100) $result->Fail()->addDescription('value are wrong');
+		$result->Expected(array(true, 100))->Result(array($call, $check));
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$this->mem->save(__METHOD__, 'string');
 		$call = $this->mem->increment(__METHOD__, 10);
-		$result->Expected(true)->Result($call);
 		$check = $this->mem->read(__METHOD__);
-		if ($check!='string10') $result->Fail()->addDescription('value are wrong');
+		$result->Expected(array(true, 'string10'))->Result(array($call, $check));
 
 		return $results;
 	}
@@ -252,7 +249,7 @@ class MemoryObject_Test
 
 		$this->mem->save(__METHOD__, 1);
 		$call = $this->mem->lock_key(__METHOD__, $l);
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->lock_key(__METHOD__, $l1);
 		if ($check) $result->Fail()->addDescription('key was not locked');
 		$this->mem->unlock_key($l);
@@ -265,13 +262,18 @@ class MemoryObject_Test
 		$results = array();
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
-		$this->mem->add(__METHOD__.'t1', 10, 10);
+		$this->mem->save(__METHOD__.'t1', 10);
 		$call = $this->mem->read(__METHOD__.'t1');
-		$result->Expected(10)->Result($call);
+		$result->Expected(10)->Result($call)->addDescription($this->mem->getLastErr());
+
+		$results[] = $result = new TestResult(__METHOD__.__LINE__);
+		$this->mem->save(__METHOD__.'t1', 'string', 10);
+		$call = $this->mem->read(__METHOD__.'t1');
+		$result->setTypesCompare()->Expected('string')->Result($call)->addDescription($this->mem->getLastErr());
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->read(__METHOD__.'t1', $ttl_left);
-		$result->Expected(array(10, 10))->Result(array($call, $ttl_left));
+		$result->Expected(array('string', 10))->Result(array($call, $ttl_left))->addDescription($this->mem->getLastErr());
 
 		return $results;
 
@@ -283,41 +285,41 @@ class MemoryObject_Test
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->save(__METHOD__.'s1', 100);
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'s1');
-		if ($check!==100) $result->Fail()->addDescription('value mismatch');
+		if ($check!=100) $result->Fail()->addDescription('value mismatch, should be 100, result: '.$check);
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->save(__METHOD__.'s2', 100, 10);
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'s2', $ttl_left);
-		if ($check!==100) $result->Fail()->addDescription('value mismatch: '.$check);
+		if ($check!=100) $result->Fail()->addDescription('value mismatch: '.$check);
 		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left);
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->save(__METHOD__.'s21', 100, 0.000001);
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'s21', $ttl_left);
-		if ($check!==100) $result->Fail()->addDescription('value mismatch: '.$check);
+		if ($check!=100) $result->Fail()->addDescription('value mismatch: '.$check);
 		if ($ttl_left < 10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left);
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->save(__METHOD__.'s22', 100, 'stringttl');
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'s22', $ttl_left);
-		if ($check!==100) $result->Fail()->addDescription('value mismatch: '.$check);
+		if ($check!=100) $result->Fail()->addDescription('value mismatch: '.$check);
 		if ($ttl_left <= 10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left);
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->save(__METHOD__.'s3', 100, 10, 'tag');
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'s3', $ttl_left);
-		if ($check!==100) $result->Fail()->addDescription('value mismatch');
+		if ($check!=100) $result->Fail()->addDescription('value mismatch');
 		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch');
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->save(__METHOD__.'s4', array('z' => 1), 10, array('tag', 'tag1'));
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'s4', $ttl_left);
 		if ($check!==array('z' => 1)) $result->Fail()->addDescription('value mismatch');
 		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch');
@@ -337,16 +339,16 @@ class MemoryObject_Test
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->select(array(array('k' => 'kk1', 'r' => '=', 'v' => 5)));
-		$result->Expected(array('kk1' => 5, 'kk2' => 7))->Result($call);
+		$result->Expected(array('kk1' => 5, 'kk2' => 7))->Result($call)->addDescription($this->mem->getLastErr());
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->select(array(array('k' => 'kk1', 'r' => '>', 'v' => 2),
 										array('k' => 'kk2', 'r' => '<', 'v' => 6)));
-		$result->Expected(array('kk1' => 5, 'kk2' => 5))->Result($call);
+		$result->Expected(array('kk1' => 5, 'kk2' => 5))->Result($call)->addDescription($this->mem->getLastErr());
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->select(array(array('k' => 'kk1', 'r' => '=', 'v' => 5)), true);
-		$result->Expected(array('key1' => array('kk1' => 5, 'kk2' => 7), 'key3' => array('kk1' => 5, 'kk2' => 5)))->Result($call);
+		$result->Expected(array('key1' => array('kk1' => 5, 'kk2' => 7), 'key3' => array('kk1' => 5, 'kk2' => 5)))->Result($call)->addDescription($this->mem->getLastErr());
 
 		return $results;
 	}
@@ -362,15 +364,15 @@ class MemoryObject_Test
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->select_fx(create_function('$s,$index', "if (\$index=='key1' || \$s['kk2']==7) return true; else return false;"));
-		$result->Expected(array('kk1' => 5, 'kk2' => 7))->Result($call);
+		$result->Expected(array('kk1' => 5, 'kk2' => 7))->Result($call)->addDescription($this->mem->getLastErr());
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->select_fx(create_function('$s,$index', "if (\$s['kk1']==\$s['kk2']) return true; else return false;"));
-		$result->Expected(array('kk1' => 5, 'kk2' => 5))->Result($call);
+		$result->Expected(array('kk1' => 5, 'kk2' => 5))->Result($call)->addDescription($this->mem->getLastErr());
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->select_fx(create_function('$s,$index', "if (\$s['kk1']==\$s['kk2'] || \$index=='key4') return true; else return false;"), true);
-		$result->Expected(array('key3' => array('kk1' => 5, 'kk2' => 5), 'key4' => array('kk1' => 2, 'kk2' => 4)))->Result($call);
+		$result->Expected(array('key3' => array('kk1' => 5, 'kk2' => 5), 'key4' => array('kk1' => 2, 'kk2' => 4)))->Result($call)->addDescription($this->mem->getLastErr());
 
 		return $results;
 	}
@@ -383,7 +385,7 @@ class MemoryObject_Test
 		$this->mem->save(__METHOD__, 1);
 		$this->mem->lock_key(__METHOD__, $l);
 		$call = $this->mem->unlock_key($l);
-		$result->Expected(true)->Result($call);
+		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->lock_key(__METHOD__, $l1);
 		if (!$check) $result->Fail()->addDescription('key still locked');
 		$this->mem->unlock_key($l1);
