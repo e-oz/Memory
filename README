@@ -17,7 +17,7 @@ For APCObject:
 	apc.user_ttl = 3600
 	apc.shm_size = 64M
 
-For MemoryAsObject, MultiAccess:
+For SHMObject and MultiAccess:
 	PHP should support shm-functions and msg-functions (--enable-shmop --enable-sysvsem --enable-sysvshm --enable-sysvmsg)
 
 Look at comments for info. Ask, what you want to see commented.
