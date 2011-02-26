@@ -4,9 +4,9 @@
 // Static class Memory can be used very simply, without any initialization even.
 // But Memory is just wrapper for concrete 'Memory Objects'.
 // You can use MemoryObject directly:
-$mem = new MemoryObject(__FILE__);
+$mem = new SHMObject(__FILE__);
 // or initialize Memory class with your object (implements IMemoryObject interface)
-Memory::ini(new MemoryObject(__FILE__));
+Memory::ini(new SHMObject(__FILE__));
 // or use APC:
 $apcmem = new APCObject('my_cacher');
 // and in Memory too:
