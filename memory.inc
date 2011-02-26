@@ -32,27 +32,104 @@ class Key_AutoUnlocker
 
 interface IMemoryStorage
 {
+	/**
+	 * Add value to memory storage, only if this key does not exists (or false will be returned).
+	 *
+	 * @param string $k
+	 * @param mixed $v
+	 * @param integer $ttl
+	 * @param array|string $tags
+	 * @return boolean
+	 */
 	public function add($k, $v, $ttl = 259200, $tags = NULL);
 
+	/**
+	 * Save variable in memory storage
+	 *
+	 * @param string $k
+	 * @param mixed $v
+	 * @param integer $ttl - time to live (store) in seconds
+	 * @param array|string $tags - array of tags for this key
+	 * @return bool
+	 */
 	public function save($k, $v, $ttl = 259200, $tags = NULL);
 
+	/**
+	 * Read data from memory storage
+	 *
+	 * @param string|array $k (string or array of string keys)
+	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
+	 * @return mixed
+	 */
 	public function read($k, &$ttl_left = -1);
 
+	/**
+	 * Delete key or array of keys from storage (from map)
+	 * @param string|array $k
+	 * @return boolean
+	 */
 	public function del($k);
 
+	/**
+	 * Delete old (by ttl) variables from storage
+	 * It's very important function to prevent APC's cache fragmentation.
+	 * @return boolean
+	 */
 	public function del_old(Array $with_keys = NULL);
 
+	/**
+	 * Delete keys by tags
+	 *
+	 * @param array|string $tags - tag or array of tags
+	 * @return boolean
+	 */
 	public function del_by_tags($tag);
 
+	/**
+	 * Select from storage by params
+	 * k - key, r - relation, v - value
+	 * relations: "<", ">", "=" or "==", "!=" or "<>"
+	 * example: select(array(array('k'=>'user_id',	'r'=>'<',	'v'=>1))); - select where user_id<1
+	 * @param array $params
+	 * @param bool $get_array
+	 * @return mixed
+	 */
 	public function select($params, $get_array = false);
 
+	/**
+	 * Select from storage via callback function
+	 *
+	 * @param callback $fx ($value_array,$key)
+	 * @param bool $get_array
+	 * @return mixed
+	 */
 	public function select_fx($fx, $get_array = false);
 
+	/**
+	 * Increment
+	 * @param string $key
+	 * @param integer|string $by_value
+	 * @return bool
+	 */
 	public function increment($key, $by_value = 1);
 
+	/**
+	 * Get exclusive mutex for key. Key will be still accessible to read and write, but
+	 * another process can exclude dog-pile effect, if before updating the key he will try to get this mutex.
+	 * @param mixed $key
+	 * @param mixed $auto_unlocker_variable - pass empty, just declared variable
+	 */
 	public function lock_key($key, &$auto_unlocker_variable);
 
+	/**
+	 * Unlock key, locked by method 'lock_key'
+	 * @param Key_AutoUnlocker $auto_unlocker
+	 * @return bool
+	 */
 	public function unlock_key(Key_AutoUnlocker $auto_unlocker);
+
+	/** Return array of all stored keys */
+	public function get_keys();
 
 	public function getLastErr();
 }
@@ -209,7 +286,7 @@ class Memory
 	/**
 	 * Unlock key, locked by method 'lock_key'
 	 * @static
-	 * @param Key_AutoUnlocker $auto_unlocker
+	 * @param Key_AutoUnlocker|NULL $auto_unlocker
 	 * @return bool
 	 */
 	public static function unlock_key(Key_AutoUnlocker $auto_unlocker)
@@ -218,7 +295,7 @@ class Memory
 	}
 }
 
-class MemoryObject implements IMemoryStorage
+class SHMObject implements IMemoryStorage
 {
 	/** @var mem */
 	protected $mem_object;
@@ -231,6 +308,7 @@ class MemoryObject implements IMemoryStorage
 	/** @var MultiAccess */
 	protected $mutex;
 	protected $last_err;
+	protected $err_log;
 
 	const map_key_start = 0;
 	const map_key_fin = 1;
@@ -269,7 +347,7 @@ class MemoryObject implements IMemoryStorage
 		if (!$this->shm_data_id) $this->shm_data_id = shmop_open($this->shm_data_key, "n", 0777, $this->max_size);
 		if (!$this->shm_data_id)
 		{
-			$this->last_err = __FUNCTION__.': Can not create data segment in shared memory';
+			$this->ReportError('Can not create data segment in shared memory', __LINE__);
 			return false;
 		}
 
@@ -279,7 +357,7 @@ class MemoryObject implements IMemoryStorage
 		if (is_object($this->mem_object)) $this->ini = true;
 		else
 		{
-			$this->last_err = __FUNCTION__.': Can not create map';
+			$this->ReportError('Can not create map', __LINE__);
 			return false;
 		}
 		return $this->ini;
@@ -297,19 +375,19 @@ class MemoryObject implements IMemoryStorage
 	{
 		if (empty($k) || $v==NULL)
 		{
-			$this->last_err = __FUNCTION__.': empty keys and values are not allowed';
+			$this->ReportError('empty keys and values are not allowed', __LINE__);
 			return false;
 		}
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
-			$this->last_err = __FUNCTION__.': write mutex not acquired';
+			$this->ReportError('write mutex not acquired', __LINE__);
 			return false;
 		}
 		$map = $this->mem_object->read('map');
 		if (array_key_exists($k, $map))
 		{
-			$this->last_err = __FUNCTION__.': key already exists';
+			$this->ReportError('key already exists', __LINE__);
 			return false;
 		}
 		return $this->save($k, $v, $ttl, $tags);
@@ -351,13 +429,14 @@ class MemoryObject implements IMemoryStorage
 	{
 		if (empty($k) || $v===NULL)
 		{
-			$this->last_err = __FUNCTION__.': empty key and null value are not allowed';
+			$this->ReportError('empty key and null value are not allowed', __LINE__);
 			return false;
 		}
+
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
-			$this->last_err = __FUNCTION__.': write mutex not acquired';
+			$this->ReportError('write mutex not acquired', __LINE__);
 			return false;
 		}
 		$map = $this->mem_object->read('map');
@@ -376,7 +455,7 @@ class MemoryObject implements IMemoryStorage
 				$start = $this->find_free_space($map, $size);
 				if ($start===false)
 				{
-					$this->last_err = __FUNCTION__.': Can not find enough space in memory';
+					$this->ReportError('Can not find enough space in memory', __LINE__);
 					return false;
 				}
 			}
@@ -390,7 +469,7 @@ class MemoryObject implements IMemoryStorage
 					$start = $this->find_free_space($map, $size);
 					if ($start===false)
 					{
-						$this->last_err = __FUNCTION__.': Can not find enough space in memory';
+						$this->ReportError('Can not find enough space in memory', __LINE__);
 						return false;
 					}
 				}
@@ -408,7 +487,7 @@ class MemoryObject implements IMemoryStorage
 		$r = $this->mem_object->save('map', $map);
 		if ($r===false)
 		{
-			$this->last_err = __FUNCTION__.': map was not saved';
+			$this->ReportError('map was not saved', __LINE__);
 			return false;
 		}
 		if (!empty($tags))
@@ -459,7 +538,7 @@ class MemoryObject implements IMemoryStorage
 			else $free_to = $imap[($i+1)][self::map_key_start]-1;
 			if (($free_to-$free_from) > $size) return $free_from;
 		}
-		$this->last_err = __FUNCTION__.': Can not find enough space in memory';
+		$this->ReportError('Can not find enough space in memory', __LINE__);
 		return false;
 	}
 
@@ -488,19 +567,19 @@ class MemoryObject implements IMemoryStorage
 	{
 		if (empty($k))
 		{
-			$this->last_err = __FUNCTION__.': empty key are not allowed';
+			$this->ReportError('empty key are not allowed', __LINE__);
 			return NULL;
 		}
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_read($auto_unlocker))
 		{
-			$this->last_err = __FUNCTION__.': read access mutex not acquired';
+			$this->ReportError('read access mutex not acquired', __LINE__);
 			return NULL;
 		}
 		$map = $this->mem_object->read('map');
 		if (empty($map))
 		{
-			$this->last_err = __FUNCTION__.': map is empty';
+			$this->ReportError('map are empty', __LINE__);
 			return NULL;
 		}
 
@@ -542,14 +621,14 @@ class MemoryObject implements IMemoryStorage
 		{
 			if (!array_key_exists($k, $map))
 			{
-				$this->last_err = __FUNCTION__.': key are not in map';
+				$this->ReportError('key are not in map', __LINE__);
 				return NULL;
 			}
 			if (!empty($map[$k][self::map_key_ttl]))
 			{
 				if ($map[$k][self::map_key_ttl] < time())
 				{
-					$this->last_err = __FUNCTION__.': ttl expired';
+					$this->ReportError('ttl expired', __LINE__);
 					$this->del($k);
 					return NULL;
 				}
@@ -576,6 +655,28 @@ class MemoryObject implements IMemoryStorage
 			}
 		}
 		return $data;
+	}
+
+	/** Return array of all stored keys */
+	public function get_keys()
+	{
+		$map = array_keys($this->mem_object->read('map'));
+		if (!is_array($map))
+		{
+			$this->ReportError('can not read map', __LINE__);
+			return false;
+		}
+		$rebase = false;
+		foreach ($map as $i => $key)
+		{
+			if (strpos($key, self::lock_key_prefix)===0 || strpos($key, '_ttl')===0 || strpos($key, '_info')===0)
+			{
+				$rebase = true;
+				unset($map[$i]);
+			}
+		}
+		if ($rebase) $map = array_unique($map);
+		return $map;
 	}
 
 	/**
@@ -611,13 +712,13 @@ class MemoryObject implements IMemoryStorage
 	{
 		if ($k==NULL || $k=='')
 		{
-			$this->last_err = __FUNCTION__.': Can not delete empty key';
+			$this->ReportError('Can not delete empty key', __LINE__);
 			return false;
 		}
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
-			$this->last_err = __FUNCTION__.': write mutex not acquired';
+			$this->ReportError('write mutex not acquired', __LINE__);
 			return false;
 		}
 		$map = $this->mem_object->read('map');
@@ -629,7 +730,7 @@ class MemoryObject implements IMemoryStorage
 		$r = $this->mem_object->save('map', $map);
 		if ($r===false)
 		{
-			$this->last_err = __FUNCTION__.': map was not saved';
+			$this->ReportError('map was not saved', __LINE__);
 			return false;
 		}
 		return true;
@@ -645,7 +746,7 @@ class MemoryObject implements IMemoryStorage
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
-			$this->last_err = __FUNCTION__.': write mutex was not acquired';
+			$this->ReportError('write mutex was not acquired', __LINE__);
 			return false;
 		}
 		$r = 0;
@@ -670,13 +771,13 @@ class MemoryObject implements IMemoryStorage
 	{
 		if (empty($tag))
 		{
-			$this->last_err = __FUNCTION__.': empty value instead of tags given';
+			$this->ReportError('empty value instead of tags given', __LINE__);
 			return false;
 		}
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
-			$this->last_err = __FUNCTION__.': write mutex not acquired';
+			$this->ReportError('write mutex not acquired', __LINE__);
 			return false;
 		}
 		$mem_tags = $this->mem_object->read('tags');
@@ -703,7 +804,7 @@ class MemoryObject implements IMemoryStorage
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_read($auto_unlocker))
 		{
-			$this->last_err = __FUNCTION__.': read mutex not acquired';
+			$this->ReportError('read mutex not acquired', __LINE__);
 			return false;
 		}
 		$map = $this->mem_object->read('map');
@@ -771,7 +872,7 @@ class MemoryObject implements IMemoryStorage
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_read($auto_unlocker))
 		{
-			$this->last_err = __FUNCTION__.': read mutex not acquired';
+			$this->ReportError('read mutex not acquired', __LINE__);
 			return false;
 		}
 		$map = $this->mem_object->read('map');
@@ -802,13 +903,13 @@ class MemoryObject implements IMemoryStorage
 	{
 		if (empty($key))
 		{
-			$this->last_err = __FUNCTION__.': empty key can not be incremented';
+			$this->ReportError('empty key can not be incremented', __LINE__);
 			return false;
 		}
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
-			$this->last_err = __FUNCTION__.': write mutex not acquired';
+			$this->ReportError('write mutex not acquired', __LINE__);
 			return false;
 		}
 		$map = $this->mem_object->read('map');
@@ -883,7 +984,7 @@ class MemoryObject implements IMemoryStorage
 	{
 		if (empty($auto_unlocker->key))
 		{
-			$this->last_err = __FUNCTION__.': autoUnlocker should be passed';
+			$this->ReportError('autoUnlocker should be passed', __LINE__);
 			return false;
 		}
 		$auto_unlocker->revoke();
@@ -897,6 +998,13 @@ class MemoryObject implements IMemoryStorage
 		return $t;
 	}
 
+	protected function ReportError($msg, $line)
+	{
+		$this->last_err = $line.': '.$msg;
+		$this->err_log[] = $line.': '.$msg;
+		return false;
+	}
+
 }
 
 class APCObject implements IMemoryStorage
@@ -906,6 +1014,7 @@ class APCObject implements IMemoryStorage
 	protected $lock_key_prefix;
 	protected $defragmentation_prefix;
 	protected $last_err;
+	protected $err_log;
 
 	const map_prefix = '.map.';
 	const lock_key_prefix = '.lock_key.';
@@ -943,7 +1052,7 @@ class APCObject implements IMemoryStorage
 	{
 		if (empty($k) || $v==NULL)
 		{
-			$this->last_err = __FUNCTION__.': empty keys and NULL values are not allowed';
+			$this->ReportError('empty keys and NULL values are not allowed', __LINE__);
 			return false;
 		}
 		$ttl = intval($ttl);
@@ -952,7 +1061,7 @@ class APCObject implements IMemoryStorage
 		$add = apc_add($this->prefix.$k, $v, $ttl);
 		if (!$add)
 		{
-			$this->last_err = __FUNCTION__.': key already exists';
+			$this->ReportError('key already exists', __LINE__);
 			return false;
 		}
 
@@ -989,7 +1098,7 @@ class APCObject implements IMemoryStorage
 	{
 		if (empty($k))
 		{
-			$this->last_err = __FUNCTION__.': empty key are not allowed';
+			$this->ReportError('empty key are not allowed', __LINE__);
 			return false;
 		}
 		$ttl = intval($ttl);
@@ -999,7 +1108,7 @@ class APCObject implements IMemoryStorage
 
 		if (!apc_store($this->prefix.$k, $v, $ttl))
 		{
-			$this->last_err = __FUNCTION__.': apc can not store key';
+			$this->ReportError('apc can not store key', __LINE__);
 			return false;
 		}
 
@@ -1018,7 +1127,7 @@ class APCObject implements IMemoryStorage
 	{
 		if (empty($k))
 		{
-			$this->last_err = __FUNCTION__.': empty key are not allowed';
+			$this->ReportError('empty key are not allowed', __LINE__);
 			return NULL;
 		}
 		if (is_array($k))
@@ -1033,13 +1142,13 @@ class APCObject implements IMemoryStorage
 		{
 			if (!apc_exists($this->prefix.$k))
 			{
-				$this->last_err = __FUNCTION__.': key does not exists';
+				$this->ReportError('key '.$k.' does not exists', __LINE__);
 				return false;
 			}
 			$data = apc_fetch($this->prefix.$k, $success);
 			if (!$success)
 			{
-				$this->last_err = __FUNCTION__.': apc can not fetch key';
+				$this->ReportError('apc can not fetch key', __LINE__);
 				return false;
 			}
 			if ($ttl_left!==-1)
@@ -1052,6 +1161,18 @@ class APCObject implements IMemoryStorage
 		return $data;
 	}
 
+	/** Return array of all stored keys */
+	public function get_keys($with_values = false)
+	{
+		$map = apc_fetch($this->map_prefix);
+		if (is_array($map)) return array_keys($map);
+		else
+		{
+			$this->ReportError('can not read map', __LINE__);
+			return false;
+		}
+	}
+
 	/**
 	 * Delete key or array of keys from storage (from map)
 	 * @param string|array $k
@@ -1061,7 +1182,7 @@ class APCObject implements IMemoryStorage
 	{
 		if (empty($k))
 		{
-			$this->last_err = __FUNCTION__.': empty key are not allowed';
+			$this->ReportError('empty key are not allowed', __LINE__);
 			return false;
 		}
 		$this->map_delete($k);
@@ -1104,7 +1225,7 @@ class APCObject implements IMemoryStorage
 			$map = apc_fetch($this->map_prefix, $success);
 			if (!$success)
 			{
-				$this->last_err = __FUNCTION__.': apc can not fetch map';
+				$this->ReportError('apc can not fetch map', __LINE__);
 				return false;
 			}
 
@@ -1136,7 +1257,7 @@ class APCObject implements IMemoryStorage
 		$map = apc_fetch($this->map_prefix, $success);
 		if (!$success)
 		{
-			$this->last_err = __FUNCTION__.': apc can not fetch map';
+			$this->ReportError('apc can not fetch map', __LINE__);
 			return false;
 		}
 		$todel = array();
@@ -1172,7 +1293,7 @@ class APCObject implements IMemoryStorage
 		$map = apc_fetch($this->map_prefix, $success);
 		if (!$success)
 		{
-			$this->last_err = __FUNCTION__.': apc can not fetch map';
+			$this->ReportError('apc can not fetch map', __LINE__);
 			return false;
 		}
 
@@ -1239,7 +1360,7 @@ class APCObject implements IMemoryStorage
 		$map = apc_fetch($this->map_prefix, $success);
 		if (!$success)
 		{
-			$this->last_err = __FUNCTION__.': apc can not fetch map';
+			$this->ReportError('apc can not fetch map', __LINE__);
 			return false;
 		}
 
@@ -1261,15 +1382,15 @@ class APCObject implements IMemoryStorage
 
 	/**
 	 * Increment
-	 * @param mixed $key
-	 * @param integer $by_value
+	 * @param string $key
+	 * @param integer|string $by_value
 	 * @return bool
 	 */
 	public function increment($key, $by_value = 1)
 	{
 		if (empty($key))
 		{
-			$this->last_err = __FUNCTION__.': empty keys are not allowed';
+			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
 		$value = apc_fetch($this->prefix.$key, $success);
@@ -1298,7 +1419,6 @@ class APCObject implements IMemoryStorage
 	 * Value of this key are too old, so Process 1 going to refresh it. Simultaneously with Process 2.
 	 * But both of them trying to lock_key, and Process 1 only will refresh value of key (taking it from database, e.g.),
 	 * and Process 2 can decide, what he want to do - use old value and not spent time to database, or something else.
-	 * @static
 	 * @param mixed $key
 	 * @param mixed $auto_unlocker_variable - pass empty, just declared variable
 	 */
@@ -1313,7 +1433,6 @@ class APCObject implements IMemoryStorage
 
 	/**
 	 * Unlock key, locked by method 'lock_key'
-	 * @static
 	 * @param Key_AutoUnlocker $auto_unlocker
 	 * @return bool
 	 */
@@ -1321,7 +1440,7 @@ class APCObject implements IMemoryStorage
 	{
 		if (empty($auto_unlocker->key))
 		{
-			$this->last_err = __FUNCTION__.': autoUnlocker should be passed';
+			$this->ReportError('autoUnlocker should be passed', __LINE__);
 			return false;
 		}
 		$auto_unlocker->revoke();
@@ -1375,7 +1494,7 @@ class APCObject implements IMemoryStorage
 		$map = apc_fetch($this->map_prefix, $success);
 		if (!$success)
 		{
-			$this->last_err = __FUNCTION__.': apc can not fetch map';
+			$this->ReportError('apc can not fetch map', __LINE__);
 			return false;
 		}
 		foreach ($keys as $key) unset($map[$key]);
@@ -1388,4 +1507,18 @@ class APCObject implements IMemoryStorage
 		$this->last_err = '';
 		return $t;
 	}
+
+	protected function ReportError($msg, $line)
+	{
+		$this->last_err = $line.': '.$msg;
+		$this->err_log[] = $line.': '.$msg;
+		return false;
+	}
+
 }
+
+/**
+ * Functions getLastErr and ReportError are same in two classes.
+ * I won't use 'extends' just for debugger's function's.
+ * It's good case to use traits: http://wiki.php.net/rfc/traits
+ */
