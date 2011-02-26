@@ -124,6 +124,7 @@ class MemoryObject_Test
 		$results[] = $this->test_unlock_key();
 		$results[] = $this->test_increment();
 		$results[] = $this->test_del_old();
+		$results[] = $this->test_get_keys();
 
 		return $results;
 	}
@@ -214,6 +215,7 @@ class MemoryObject_Test
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__);
 		if (!empty($check)) $result->Fail()->addDescription('variable still exists');
+		$this->mem->getLastErr();
 
 		return $results;
 	}
@@ -389,6 +391,23 @@ class MemoryObject_Test
 		$check = $this->mem->lock_key(__METHOD__, $l1);
 		if (!$check) $result->Fail()->addDescription('key still locked');
 		$this->mem->unlock_key($l1);
+
+		return $results;
+	}
+
+	public function test_get_keys()
+	{
+		$results = array();
+		$results[] = $result = new TestResult(__METHOD__.__LINE__);
+
+		$this->mem->save(__METHOD__.':1', 1);
+		$this->mem->save(__METHOD__.':2', 1);
+		$this->mem->save(__METHOD__.':3', 1);
+		$call = $this->mem->get_keys();
+		$result->setTypesCompare()->Expected(true)->Result(is_array($call))->addDescription($this->mem->getLastErr());
+		$this->mem->del($call);
+		$check = $this->mem->get_keys();
+		if (!empty($check)) $result->Fail()->addDescription('not all keys was deleted');
 
 		return $results;
 	}
