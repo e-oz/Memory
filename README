@@ -20,10 +20,6 @@ For APCObject:
 For MemoryAsObject, MultiAccess:
 	PHP should support shm-functions and msg-functions (--enable-shmop --enable-sysvsem --enable-sysvshm --enable-sysvmsg)
 
-APC is faster, but can have some fragmentation issues - check, if it works normal for you. This issues can be solved only by the APC developers.
-
 Look at comments for info. Ask, what you want to see commented.
 
 License: MIT
-
-TODO: write full documentation
