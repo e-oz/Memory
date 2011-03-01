@@ -106,10 +106,10 @@ interface IMemoryStorage
 	public function select_fx($fx, $get_array = false);
 
 	/**
-	 * Increment
+	 * Increment value of key.
 	 * @param string $key
 	 * @param integer|string $by_value
-	 * @return bool
+	 * @return int|string new value of key
 	 */
 	public function increment($key, $by_value = 1);
 
@@ -492,11 +492,7 @@ class SHMObject implements IMemoryStorage
 		}
 		if (!empty($tags))
 		{
-			if (!is_array($tags))
-			{
-				if (is_scalar($tags)) $tags = array($tags);
-				else goto tags_if_end;
-			}
+			if (!is_array($tags)) $tags = array($tags);
 			$tags_was_changed = false;
 			$mem_tags = $this->mem_object->read('tags');
 			foreach ($tags as $tag)
@@ -508,7 +504,6 @@ class SHMObject implements IMemoryStorage
 				}
 			}
 			if ($tags_was_changed) $this->mem_object->save('tags', $mem_tags);
-			tags_if_end:
 		}
 		return true;
 	}
@@ -624,20 +619,18 @@ class SHMObject implements IMemoryStorage
 				$this->ReportError('key are not in map', __LINE__);
 				return NULL;
 			}
+			$ttl_left = self::max_ttl;
 			if (!empty($map[$k][self::map_key_ttl]))
 			{
-				if ($map[$k][self::map_key_ttl] < time())
+				$ttl_left = $map[$k][self::map_key_ttl]-time();
+				if ($ttl_left <= 0)
 				{
 					$this->ReportError('ttl expired', __LINE__);
 					$this->del($k);
 					return NULL;
 				}
-				else
-				{
-					$ttl_left = $map[$k][self::map_key_ttl]-time();
-				}
 			}
-			else $ttl_left = self::max_ttl;
+
 			$from = $map[$k][self::map_key_start];
 			$to = $map[$k][self::map_key_fin];
 			$data = $this->read_data($from, $to);
@@ -915,13 +908,14 @@ class SHMObject implements IMemoryStorage
 		$map = $this->mem_object->read('map');
 		if (!array_key_exists($key, $map))
 		{
-			return $this->save($key, $by_value);
+			if ($this->save($key, $by_value)) return $by_value;
+			else return false;
 		}
 		$value = $this->read($key);
 		if (is_numeric($value) && is_numeric($by_value)) $value += $by_value;
 		else $value .= $by_value;
 		$this->save($key, $value);
-		return true;
+		return $value;
 	}
 
 	public function get_stat()
@@ -961,7 +955,6 @@ class SHMObject implements IMemoryStorage
 	 * Value of this key are too old, so Process 1 going to refresh it. Simultaneously with Process 2.
 	 * But both of them trying to lock_key, and Process 1 only will refresh value of key (taking it from database, e.g.),
 	 * and Process 2 can decide, what he want to do - use old value and not spent time to database, or something else.
-	 * @static
 	 * @param mixed $key
 	 * @param mixed $auto_unlocker_variable - pass empty, just declared variable
 	 */
@@ -976,7 +969,6 @@ class SHMObject implements IMemoryStorage
 
 	/**
 	 * Unlock key, locked by method 'lock_key'
-	 * @static
 	 * @param Key_AutoUnlocker $auto_unlocker
 	 * @return bool
 	 */
@@ -1396,13 +1388,15 @@ class APCObject implements IMemoryStorage
 		$value = apc_fetch($this->prefix.$key, $success);
 		if (!$success)
 		{
-			return $this->save($key, $by_value);
+			if ($this->save($key, $by_value)) return $by_value;
+			else return false;
 		}
 		if (is_numeric($value) && is_numeric($by_value)) return apc_inc($this->prefix.$key, $by_value);
 		else
 		{
 			$value .= $by_value;
-			return $this->save($key, $value);
+			if ($this->save($key, $value)) return $value;
+			else return false;
 		}
 
 	}
@@ -1518,7 +1512,7 @@ class APCObject implements IMemoryStorage
 }
 
 /**
- * Functions getLastErr and ReportError are same in two classes.
+ * Functions getLastErr and ReportError are same in 4 classes.
  * I won't use 'extends' just for debugger's function's.
  * It's good case to use traits: http://wiki.php.net/rfc/traits
  */
