@@ -72,10 +72,9 @@ interface IMemoryStorage
 
 	/**
 	 * Delete old (by ttl) variables from storage
-	 * It's very important function to prevent APC's cache fragmentation.
 	 * @return boolean
 	 */
-	public function del_old(Array $with_keys = NULL);
+	public function del_old();
 
 	/**
 	 * Delete keys by tags
@@ -1197,12 +1196,10 @@ class APCObject implements IMemoryStorage
 	 * It's very important function to prevent APC's cache fragmentation.
 	 * @return boolean
 	 */
-	public function del_old(Array $with_keys = NULL, $force_refresh = false)
+	public function del_old()
 	{
 		$t = time();
-		if (!empty($with_keys)) $this->del($with_keys);
-		if ($force_refresh) $previous_cleaning = 0;
-		else $previous_cleaning = apc_fetch($this->defragmentation_prefix);
+		$previous_cleaning = apc_fetch($this->defragmentation_prefix);
 		if (empty($previous_cleaning) || ($t-$previous_cleaning) > 1800)
 		{
 			apc_store($this->defragmentation_prefix, $t, 1800);

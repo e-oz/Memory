@@ -211,7 +211,7 @@ class MemoryObject_Test
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$this->mem->save(__METHOD__, 11, 1);
 		sleep(2);
-		$call = $this->mem->del_old(null, true);
+		$call = $this->mem->del_old();
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__);
 		if (!empty($check)) $result->Fail()->addDescription('variable still exists');
