@@ -625,53 +625,14 @@ class ShmMem extends SingleMemory
 
 }
 
-class APCmem extends SingleMemory
-{
-	protected $prefix = 'Kmap'; //K - because I love my wife Katya :)
-
-	public function __construct($prefix = '')
-	{
-		if (!empty($prefix)) $this->prefix = $prefix;
-		$this->sem = new DummyMutex();
-	}
-
-	protected function readmemory()
-	{
-		if (empty($this->mem))
-		{
-			$this->mem = apc_fetch($this->prefix, $success);
-			if (!$success)
-			{
-				$this->ReportError('apc can not fetch key', __LINE__);
-				return false;
-			}
-		}
-		return true;
-	}
-
-	protected function refresh()
-	{
-		$r = apc_store($this->prefix, $this->mem, self::max_ttl);
-		if (!$r) $this->ReportError('apc can not save value', __LINE__);
-		unset($this->mem);
-		return $r;
-	}
-}
-
 class DummyMutex implements IMutex
 {
 
 	public function get_access_read(&$auto_unlocker_reference)
-	{
-		$auto_unlocker_reference = new autoUnlocker(array($this, 'release_access_read'));
-		return true;
-	}
+	{ return true; }
 
 	public function get_access_write(&$auto_unlocker_reference)
-	{
-		$auto_unlocker_reference = new autoUnlocker(array($this, 'release_access_write'));
-		return true;
-	}
+	{ return true; }
 
 	public function release_access_read(IRevokable $autoUnlocker = NULL)
 	{ return true; }
