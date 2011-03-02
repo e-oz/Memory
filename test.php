@@ -177,7 +177,7 @@ class MemoryObject_Test
 		$call = $this->mem->del(array(__METHOD__.'d1', __METHOD__.'d2'));
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(array(__METHOD__.'d1', __METHOD__.'d2'));
-		if (!empty($check)) $result->Fail()->addDescription('variables still in cache');
+		if (!empty($check)) $result->Fail()->addDescription('variables still in cache')->addDescription(print_r($check, 1));
 
 		return $results;
 	}
@@ -252,10 +252,13 @@ class MemoryObject_Test
 		$this->mem->save(__METHOD__, 1);
 		$call = $this->mem->lock_key(__METHOD__, $l);
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
-		$check = $this->mem->lock_key(__METHOD__, $l1);
-		if ($check) $result->Fail()->addDescription('key was not locked');
-		$this->mem->unlock_key($l);
-
+		if ($call)
+		{
+			$check = $this->mem->lock_key(__METHOD__, $l1);
+			if ($check) $result->Fail()->addDescription('key was not locked');
+			$this->mem->unlock_key($l);
+			$this->mem->getLastErr();
+		}
 		return $results;
 	}
 
@@ -385,13 +388,15 @@ class MemoryObject_Test
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 
 		$this->mem->save(__METHOD__, 1);
-		$this->mem->lock_key(__METHOD__, $l);
-		$call = $this->mem->unlock_key($l);
-		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
-		$check = $this->mem->lock_key(__METHOD__, $l1);
-		if (!$check) $result->Fail()->addDescription('key still locked');
-		$this->mem->unlock_key($l1);
-
+		if ($this->mem->lock_key(__METHOD__, $l))
+		{
+			$call = $this->mem->unlock_key($l);
+			$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
+			$check = $this->mem->lock_key(__METHOD__, $l1);
+			if (!$check) $result->Fail()->addDescription('can not lock key again')->addDescription($this->mem->getLastErr());
+			else $this->mem->unlock_key($l1);
+		}
+		else $result->Fail()->addDescription('key was not acquired')->addDescription($this->mem->getLastErr());
 		return $results;
 	}
 
