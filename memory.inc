@@ -332,7 +332,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 
 	const lock_key_prefix = '.lock_key.';
 	const defragmentation_prefix = '.clean.';
-	const tags_prefix = '.clean.';
+	const tags_prefix = '.tags.';
 	const max_ttl = 2592000;
 	const apc_arr_key = 'key';
 	const apc_arr_ctime = 'creation_time';
@@ -351,7 +351,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 
 		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
 		$this->defragmentation_prefix = self::defragmentation_prefix.$this->prefix;
-		$this->defragmentation_prefix = self::tags_prefix.$this->prefix;
+		$this->tags_prefix = self::tags_prefix.$this->prefix;
 	}
 
 	/**
