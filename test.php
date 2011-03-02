@@ -210,7 +210,7 @@ class MemoryObject_Test
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$this->mem->save(__METHOD__, 11, 1);
-		sleep(2);
+		sleep(3);
 		$call = $this->mem->del_old();
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__);
@@ -278,7 +278,7 @@ class MemoryObject_Test
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->read(__METHOD__.'t1', $ttl_left);
-		$result->Expected(array('string', 10))->Result(array($call, $ttl_left))->addDescription($this->mem->getLastErr());
+		$result->Expected(array('string', 'TTL: 10'))->Result(array($call, 'TTL: '.$ttl_left))->addDescription($this->mem->getLastErr());
 
 		return $results;
 
@@ -313,21 +313,20 @@ class MemoryObject_Test
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'s22', $ttl_left);
 		if ($check!=100) $result->Fail()->addDescription('value mismatch: '.$check);
-		if ($ttl_left <= 10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left);
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->save(__METHOD__.'s3', 100, 10, 'tag');
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'s3', $ttl_left);
 		if ($check!=100) $result->Fail()->addDescription('value mismatch');
-		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch');
+		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left.' instead of 10');
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->save(__METHOD__.'s4', array('z' => 1), 10, array('tag', 'tag1'));
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'s4', $ttl_left);
 		if ($check!==array('z' => 1)) $result->Fail()->addDescription('value mismatch');
-		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch');
+		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left.' instead of 10');
 
 		return $results;
 
@@ -409,10 +408,11 @@ class MemoryObject_Test
 		$this->mem->save(__METHOD__.':2', 1);
 		$this->mem->save(__METHOD__.':3', 1);
 		$call = $this->mem->get_keys();
+		if (is_array($call)) $c = count($call);
 		$result->setTypesCompare()->Expected(true)->Result(is_array($call))->addDescription($this->mem->getLastErr());
 		$this->mem->del($call);
 		$check = $this->mem->get_keys();
-		if (!empty($check)) $result->Fail()->addDescription('not all keys was deleted');
+		if (!empty($check)) $result->Fail()->addDescription('not all keys was deleted')->addDescription('Left: '.count($check).' from '.$c);
 
 		return $results;
 	}
