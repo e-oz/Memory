@@ -294,9 +294,32 @@ class Memory
 	}
 }
 
-class SHMObject implements IMemoryStorage
+abstract class MemoryObject
 {
-	/** @var mem */
+	protected $last_err;
+	protected $err_log;
+
+	public function getLastErr()
+	{
+		$t = $this->last_err;
+		$this->last_err = '';
+		return $t;
+	}
+
+	protected function ReportError($msg, $line)
+	{
+		$this->last_err = $line.': '.$msg;
+		$this->err_log[] = $line.': '.$msg;
+		return false;
+	}
+
+	public function getErrLog()
+	{ return $this->err_log; }
+}
+
+class SHMObject extends MemoryObject implements IMemoryStorage
+{
+	/** @var ShmMem */
 	protected $mem_object;
 	protected $shmsize = 102400;
 	protected $id = __FILE__;
@@ -306,8 +329,6 @@ class SHMObject implements IMemoryStorage
 	protected $readonly = false;
 	/** @var MultiAccess */
 	protected $mutex;
-	protected $last_err;
-	protected $err_log;
 
 	const map_key_start = 0;
 	const map_key_fin = 1;
@@ -352,7 +373,7 @@ class SHMObject implements IMemoryStorage
 
 		//Create an mem-object to store the Map
 		$map_id_key = ftok($this->id, 'h')+12;
-		$this->mem_object = new mem($map_id_key, $this->shmsize, $this->max_size);
+		$this->mem_object = new ShmMem($map_id_key, $this->shmsize, $this->max_size);
 		if (is_object($this->mem_object)) $this->ini = true;
 		else
 		{
@@ -981,31 +1002,14 @@ class SHMObject implements IMemoryStorage
 		$auto_unlocker->revoke();
 		return $this->mem_object->del(self::lock_key_prefix.$auto_unlocker->key);
 	}
-
-	public function getLastErr()
-	{
-		$t = $this->last_err;
-		$this->last_err = '';
-		return $t;
-	}
-
-	protected function ReportError($msg, $line)
-	{
-		$this->last_err = $line.': '.$msg;
-		$this->err_log[] = $line.': '.$msg;
-		return false;
-	}
-
 }
 
-class APCObject implements IMemoryStorage
+class APCObject extends MemoryObject implements IMemoryStorage
 {
 	protected $prefix = 'K'; //because I love my wife Katya :)
 	protected $map_prefix;
 	protected $lock_key_prefix;
 	protected $defragmentation_prefix;
-	protected $last_err;
-	protected $err_log;
 
 	const map_prefix = '.map.';
 	const lock_key_prefix = '.lock_key.';
@@ -1491,25 +1495,4 @@ class APCObject implements IMemoryStorage
 		foreach ($keys as $key) unset($map[$key]);
 		return apc_store($this->map_prefix, $map, self::max_ttl);
 	}
-
-	public function getLastErr()
-	{
-		$t = $this->last_err;
-		$this->last_err = '';
-		return $t;
-	}
-
-	protected function ReportError($msg, $line)
-	{
-		$this->last_err = $line.': '.$msg;
-		$this->err_log[] = $line.': '.$msg;
-		return false;
-	}
-
 }
-
-/**
- * Functions getLastErr and ReportError are same in 4 classes.
- * I won't use 'extends' just for debugger's function's.
- * It's good case to use traits: http://wiki.php.net/rfc/traits
- */
