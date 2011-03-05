@@ -371,7 +371,9 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		$add = apc_add($this->prefix.$k, $v, intval($ttl));
+		$ttl = intval($ttl);
+		if ($ttl==0) $ttl = self::max_ttl;
+		$add = apc_add($this->prefix.$k, $v, $ttl);
 		if (!$add)
 		{
 			$this->ReportError('key already exists', __LINE__);
@@ -396,7 +398,9 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		}
 		if (!empty($tags))
 		{
-			return apc_store($this->tags_prefix.$key, $tags, intval($ttl));
+			$ttl = intval($ttl);
+			if ($ttl==0) $ttl = self::max_ttl;
+			return apc_store($this->tags_prefix.$key, $tags, $ttl);
 		}
 		return false;
 	}
@@ -418,7 +422,9 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		if (!apc_store($this->prefix.$k, $v, intval($ttl)))
+		$ttl = intval($ttl);
+		if ($ttl==0) $ttl = self::max_ttl;
+		if (!apc_store($this->prefix.$k, $v, $ttl))
 		{
 			$this->ReportError('apc can not store key', __LINE__);
 			return false;
