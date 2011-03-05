@@ -426,7 +426,12 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		$this->del_old();
+		static $cleaned = false;
+		if (!$cleaned)
+		{
+			$this->del_old();
+			$cleaned = true;
+		}
 
 		if (!apc_store($this->prefix.$k, $v, intval($ttl)))
 		{
@@ -556,17 +561,23 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	public function del_old($force = false)
 	{
 		$t = time();
+		$check_period = 1800;
+		$apc_opcode_info = apc_cache_info('', true);
+		$apc_user_info = apc_cache_info('user', true);
+		$apc_ttl = min($apc_opcode_info['ttl'], $apc_user_info['ttl']);
+		if (!empty($apc_ttl))
+		{
+			$apc_ttl = $apc_ttl/2;
+			$check_period = $apc_ttl;
+		}
+
 		$ittl = new APCIterator('user', '/^'.$this->defragmentation_prefix.'$/', APC_ITER_ATIME, 1);
 		$cttl = $ittl->current();
 		$previous_cleaning = $cttl[self::apc_arr_atime];
-		if (empty($previous_cleaning) || ($t-$previous_cleaning) > 1800 || !empty($force))
+		if (empty($previous_cleaning) || ($t-$previous_cleaning) > $check_period || !empty($force))
 		{
-			apc_store($this->defragmentation_prefix, $t, 1800);
+			apc_store($this->defragmentation_prefix, $t, $check_period);
 			$todel = array();
-			$apc_opcode_info = apc_cache_info('', true);
-			$apc_user_info = apc_cache_info('user', true);
-			$apc_ttl = min($apc_opcode_info['ttl'], $apc_user_info['ttl']);
-			if (!empty($apc_ttl)) $apc_ttl = $apc_ttl/2;
 
 			$i = new APCIterator('user', null, APC_ITER_TTL+APC_ITER_KEY+APC_ITER_CTIME+APC_ITER_ATIME);
 			foreach ($i as $key)
