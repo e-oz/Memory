@@ -211,7 +211,7 @@ class MemoryObject_Test
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$this->mem->save(__METHOD__, 11, 1);
 		sleep(3);
-		$call = $this->mem->del_old();
+		$call = $this->mem->del_old(true);
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__);
 		if (!empty($check)) $result->Fail()->addDescription('variable still exists');
@@ -277,6 +277,11 @@ class MemoryObject_Test
 		$result->setTypesCompare()->Expected('string')->Result($call)->addDescription($this->mem->getLastErr());
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
+		$call = $this->mem->read(__METHOD__.'t1', $ttl_left);
+		$result->Expected(array('string', 'TTL: 10'))->Result(array($call, 'TTL: '.$ttl_left))->addDescription($this->mem->getLastErr());
+
+		$results[] = $result = new TestResult(__METHOD__.__LINE__);
+		$this->mem->save(__METHOD__.'t11', 10, 100);
 		$call = $this->mem->read(__METHOD__.'t1', $ttl_left);
 		$result->Expected(array('string', 'TTL: 10'))->Result(array($call, 'TTL: '.$ttl_left))->addDescription($this->mem->getLastErr());
 
@@ -365,6 +370,9 @@ class MemoryObject_Test
 		$this->mem->save('key2', array('kk1' => 4, 'kk2' => 6));
 		$this->mem->save('key3', array('kk1' => 5, 'kk2' => 5));
 		$this->mem->save('key4', array('kk1' => 2, 'kk2' => 4));
+		$this->mem->save('key5', array('id' => 0, 'kk1' => 6, 'kk2' => 5));
+		$this->mem->save('key6', array('id' => 1, 'kk1' => 9, 'kk2' => 5));
+		$this->mem->save('key7', array('id' => 0, 'kk1' => 7, 'kk2' => 4));
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->select_fx(create_function('$s,$index', "if (\$index=='key1' || \$s['kk2']==7) return true; else return false;"));
@@ -377,6 +385,10 @@ class MemoryObject_Test
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->select_fx(create_function('$s,$index', "if (\$s['kk1']==\$s['kk2'] || \$index=='key4') return true; else return false;"), true);
 		$result->Expected(array('key3' => array('kk1' => 5, 'kk2' => 5), 'key4' => array('kk1' => 2, 'kk2' => 4)))->Result($call)->addDescription($this->mem->getLastErr());
+
+		$results[] = $result = new TestResult(__METHOD__.__LINE__);
+		$call = $this->mem->select_fx(create_function('$s,$index', "if (\$s['kk1']>7 || (\$s['id']==0 && \$s['kk2']<5)) return true; else return false;"), true);
+		$result->Expected(array('key4' => array('kk1' => 2, 'kk2' => 4), 'key6' => array('id' => 1, 'kk1' => 9, 'kk2' => 5), 'key7' => array('id' => 0, 'kk1' => 7, 'kk2' => 4)))->Result($call)->addDescription($this->mem->getLastErr());
 
 		return $results;
 	}

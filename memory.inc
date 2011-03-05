@@ -350,7 +350,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		}
 
 		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
-		$this->defragmentation_prefix = self::defragmentation_prefix.$this->prefix;
+		$this->defragmentation_prefix = self::defragmentation_prefix;
 		$this->tags_prefix = self::tags_prefix.$this->prefix;
 	}
 
@@ -435,7 +435,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function getKeyTTL($key)
 	{
-		$i = new APCIterator('user', '/^'.$this->prefix.$key.'/', APC_ITER_TTL+APC_ITER_CTIME);
+		$i = new APCIterator('user', '/^'.$this->prefix.$key.'$/', APC_ITER_TTL+APC_ITER_CTIME);
 		foreach ($i as $key)
 		{
 			if ($key[self::apc_arr_ttl]!=0) return (($key[self::apc_arr_ctime]+$key[self::apc_arr_ttl])-time());
@@ -500,15 +500,9 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		$map = array();
 		$l = strlen($this->prefix);
-		$t = time();
-		$i = new APCIterator('user', '/^'.$this->prefix.'/', APC_ITER_KEY+APC_ITER_TTL+APC_ITER_CTIME);
+		$i = new APCIterator('user', '/^'.$this->prefix.'/', APC_ITER_KEY);
 		foreach ($i as $item)
 		{
-			if ($item[self::apc_arr_ttl] > 0 && ($t-$item[self::apc_arr_ctime]) > $item[self::apc_arr_ttl])
-			{
-				apc_delete($item[self::apc_arr_key]);
-				continue;
-			}
 			$map[] = substr($item[self::apc_arr_key], $l);
 		}
 		return $map;
@@ -553,19 +547,25 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 * It's very important function to prevent APC's cache fragmentation.
 	 * @return boolean
 	 */
-	public function del_old()
+	public function del_old($force = false)
 	{
 		$t = time();
 		$previous_cleaning = apc_fetch($this->defragmentation_prefix);
-		if (empty($previous_cleaning) || ($t-$previous_cleaning) > 1800)
+		if (empty($previous_cleaning) || ($t-$previous_cleaning) > 1800 || $force)
 		{
 			apc_store($this->defragmentation_prefix, $t, 1800);
+			$todel = array();
 
-			//Delete all expired entries in the APC user's cache
 			$i = new APCIterator('user', null, APC_ITER_TTL+APC_ITER_KEY+APC_ITER_CTIME);
 			foreach ($i as $key)
 			{
-				if ($key[self::apc_arr_ttl] > 0 && ($t-$key[self::apc_arr_ctime]) > $key[self::apc_arr_ttl]) apc_delete($key[self::apc_arr_key]);
+				if ($key[self::apc_arr_ttl] > 0 && ($t-$key[self::apc_arr_ctime]) > $key[self::apc_arr_ttl]) $todel[] = $key[self::apc_arr_key];
+			}
+			if (!empty($todel))
+			{
+				$r = apc_delete($todel);
+				if (!empty($r)) return $r;
+				else return true;
 			}
 		}
 		return true;
@@ -584,16 +584,10 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		$this->del_old();
 
 		$todel = array();
-		$t = time();
 		$l = strlen($this->tags_prefix);
-		$i = new APCIterator('user', '/^'.$this->tags_prefix.'/', APC_ITER_TTL+APC_ITER_KEY+APC_ITER_CTIME+APC_ITER_VALUE);
+		$i = new APCIterator('user', '/^'.$this->tags_prefix.'/', APC_ITER_KEY+APC_ITER_VALUE);
 		foreach ($i as $key_tags)
 		{
-			if ($key_tags[self::apc_arr_ttl] > 0 && ($t-$key_tags[self::apc_arr_ctime]) > $key_tags[self::apc_arr_ttl])
-			{
-				apc_delete($key_tags[self::apc_arr_key]);
-				continue;
-			}
 			if (is_array($key_tags[self::apc_arr_value]))
 			{
 				$intersect = array_intersect($tags, $key_tags[self::apc_arr_value]);
@@ -617,15 +611,9 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		$arr = array();
 		$l = strlen($this->prefix);
-		$t = time();
-		$i = new APCIterator('user', '/^'.$this->prefix.'/', APC_ITER_KEY+APC_ITER_TTL+APC_ITER_CTIME+APC_ITER_VALUE);
+		$i = new APCIterator('user', '/^'.$this->prefix.'/', APC_ITER_KEY+APC_ITER_VALUE);
 		foreach ($i as $item)
 		{
-			if ($item[self::apc_arr_ttl] > 0 && ($t-$item[self::apc_arr_ctime]) > $item[self::apc_arr_ttl])
-			{
-				apc_delete($item[self::apc_arr_key]);
-				continue;
-			}
 			if (!is_array($item[self::apc_arr_value])) continue;
 			$s = $item[self::apc_arr_value];
 			$key = substr($item[self::apc_arr_key], $l);
@@ -686,15 +674,9 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		$arr = array();
 		$l = strlen($this->prefix);
-		$t = time();
-		$i = new APCIterator('user', '/^'.$this->prefix.'/', APC_ITER_KEY+APC_ITER_TTL+APC_ITER_CTIME+APC_ITER_VALUE);
+		$i = new APCIterator('user', '/^'.$this->prefix.'/', APC_ITER_KEY+APC_ITER_VALUE);
 		foreach ($i as $item)
 		{
-			if ($item[self::apc_arr_ttl] > 0 && ($t-$item[self::apc_arr_ctime]) > $item[self::apc_arr_ttl])
-			{
-				apc_delete($item[self::apc_arr_key]);
-				continue;
-			}
 			if (!is_array($item[self::apc_arr_value])) continue;
 			$s = $item[self::apc_arr_value];
 			$index = substr($item[self::apc_arr_key], $l);
