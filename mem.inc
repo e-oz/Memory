@@ -596,10 +596,13 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	}
 
 	/**
-	 * Increment value of key.
+	 * Increment value of key
 	 * @param string $key
 	 * @param mixed $by_value
-	 * @param int $limit_keys_count - maximum count of elements (new element will be pushed to the end of array)
+	 * if stored value is array:
+	 *			 if $by_value is value in array, new element will be pushed to the end of array,
+	 *			if $by_value is key=>value array, key=>value pair will be added (or updated)
+	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
 	 * @return int|string|array new value of key
 	 */
 	public function increment($key, $by_value = 1, $limit_keys_count = 0)
@@ -1049,10 +1052,13 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 	}
 
 	/**
-	 * Increment value of key.
+	 * Increment value of key
 	 * @param string $key
 	 * @param mixed $by_value
-	 * @param int $limit_keys_count - maximum count of elements (new element will be pushed to the end of array)
+	 * if stored value is array:
+	 *			 if $by_value is value in array, new element will be pushed to the end of array,
+	 *			if $by_value is key=>value array, key=>value pair will be added (or updated)
+	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
 	 * @return int|string|array new value of key
 	 */
 	public function increment($key, $by_value = 1, $limit_keys_count = 0)
