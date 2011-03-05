@@ -3,14 +3,11 @@
 /** Ways to create cache storage */
 // Static class Memory can be used very simply, without any initialization even.
 // But Memory is just wrapper for concrete 'Memory Objects'.
-// You can use MemoryObject directly:
-$mem = new SHMObject(__FILE__);
+
+// You can use the Memory Object directly:
+$mem = new APCObject('my_cacher');
 // or initialize Memory class with your object (implements IMemoryObject interface)
 Memory::ini(new SHMObject(__FILE__));
-// or use APC:
-$apcmem = new APCObject('my_cacher');
-// and in Memory too:
-Memory::ini($apcmem);
 
 /** Save variable: */
 Memory::save('key', 'value');
@@ -31,11 +28,13 @@ Memory::del('key');
 Memory::increment('digit', 1);
 //Decrement numeric value
 Memory::increment('digit', -1);
-
-//Increment of string:
+//Increment string:
 Memory::save('key_s', 'abc', 10);
-Memory::increment('key_s', 'defg');
-//now key_s = 'abcdefg'
+Memory::increment('key_s', 'defg'); //now key_s = 'abcdefg'
+//Increment array:
+Memory::save('log', array('start'));
+Memory::increment('log', 'message'); //now 'log' = array('start','message')
+Memory::increment('log', 'new message', 2); //now 'log' = array('message', 'new message')
 
 /** Tags */
 Memory::save('user_login', 'Adam', 86400, array('users', 'logins'));

@@ -37,7 +37,7 @@ interface IMemoryStorage
 	 *
 	 * @param string $k
 	 * @param mixed $v
-	 * @param integer $ttl
+	 * @param int $ttl
 	 * @param array|string $tags
 	 * @return boolean
 	 */
@@ -48,7 +48,7 @@ interface IMemoryStorage
 	 *
 	 * @param string $k
 	 * @param mixed $v
-	 * @param integer $ttl - time to live (store) in seconds
+	 * @param int $ttl - time to live (store) in seconds
 	 * @param array|string $tags - array of tags for this key
 	 * @return bool
 	 */
@@ -107,10 +107,11 @@ interface IMemoryStorage
 	/**
 	 * Increment value of key.
 	 * @param string $key
-	 * @param integer|string $by_value
-	 * @return int|string new value of key
+	 * @param mixed $by_value
+	 * @param int $limit_keys_count - maximum count of elements (new element will be pushed to the end of array)
+	 * @return int|string|array new value of key
 	 */
-	public function increment($key, $by_value = 1);
+	public function increment($key, $by_value = 1, $limit_keys_count = 0);
 
 	/**
 	 * Get exclusive mutex for key. Key will be still accessible to read and write, but
@@ -152,7 +153,7 @@ class Memory
 	 *
 	 * @param string $k
 	 * @param mixed $v
-	 * @param integer $ttl
+	 * @param int $ttl
 	 * @return boolean
 	 */
 	public static function add($k, $v, $ttl = 259200, $tags = NULL)
@@ -165,7 +166,7 @@ class Memory
 	 *
 	 * @param string $k
 	 * @param mixed $v
-	 * @param integer $ttl - time to live (store) in seconds
+	 * @param int $ttl - time to live (store) in seconds
 	 * @param array $tags - array of tags for this key
 	 * @return bool
 	 */
@@ -247,10 +248,10 @@ class Memory
 	 * Increment
 	 *
 	 * @param mixed $key
-	 * @param integer $by_value
+	 * @param int $by_value
 	 * @return bool
 	 */
-	public static function increment($key, $by_value = 1)
+	public static function increment($key, $by_value = 1, $limit_keys_count = 0)
 	{
 		return self::getMemoryObject()->increment($key, $by_value);
 	}
@@ -359,7 +360,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 *
 	 * @param string $k
 	 * @param mixed $v
-	 * @param integer $ttl
+	 * @param int $ttl
 	 * @param array|string $tags
 	 * @return boolean
 	 */
@@ -371,9 +372,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		$ttl = intval($ttl);
-		if ($ttl==0) $ttl = self::max_ttl;
-		$add = apc_add($this->prefix.$k, $v, $ttl);
+		$add = apc_add($this->prefix.$k, $v, intval($ttl));
 		if (!$add)
 		{
 			$this->ReportError('key already exists', __LINE__);
@@ -398,9 +397,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		}
 		if (!empty($tags))
 		{
-			$ttl = intval($ttl);
-			if ($ttl==0) $ttl = self::max_ttl;
-			return apc_store($this->tags_prefix.$key, $tags, $ttl);
+			return apc_store($this->tags_prefix.$key, $tags, intval($ttl));
 		}
 		return false;
 	}
@@ -410,7 +407,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 *
 	 * @param string $k
 	 * @param mixed $v
-	 * @param integer $ttl - time to live (store) in seconds
+	 * @param int $ttl - time to live (store) in seconds
 	 * @param array|string $tags - array of tags for this key
 	 * @return bool
 	 */
@@ -422,9 +419,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		$ttl = intval($ttl);
-		if ($ttl==0) $ttl = self::max_ttl;
-		if (!apc_store($this->prefix.$k, $v, $ttl))
+		if (!apc_store($this->prefix.$k, $v, intval($ttl)))
 		{
 			$this->ReportError('apc can not store key', __LINE__);
 			return false;
@@ -441,7 +436,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function getKeyTTL($key)
 	{
-		$i = new APCIterator('user', '/^'.$this->prefix.$key.'$/', APC_ITER_TTL+APC_ITER_CTIME);
+		$i = new APCIterator('user', '/^'.$this->prefix.$key.'$/', APC_ITER_TTL+APC_ITER_CTIME, 1);
 		foreach ($i as $key)
 		{
 			if ($key[self::apc_arr_ttl]!=0) return (($key[self::apc_arr_ctime]+$key[self::apc_arr_ttl])-time());
@@ -698,12 +693,13 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	}
 
 	/**
-	 * Increment
+	 * Increment value of key.
 	 * @param string $key
-	 * @param integer|string $by_value
-	 * @return bool
+	 * @param mixed $by_value
+	 * @param int $limit_keys_count - maximum count of elements (new will be pushed to the end of array)
+	 * @return int|string|array new value of key
 	 */
-	public function increment($key, $by_value = 1)
+	public function increment($key, $by_value = 1, $limit_keys_count = 0)
 	{
 		if (empty($key))
 		{
@@ -716,14 +712,20 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			if ($this->save($key, $by_value)) return $by_value;
 			else return false;
 		}
-		if (is_numeric($value) && is_numeric($by_value)) return apc_inc($this->prefix.$key, $by_value);
+		if (is_array($value))
+		{
+			if ($limit_keys_count > 0 && (count($value) > $limit_keys_count)) $value = array_slice($value, $limit_keys_count*(-1)+1);
+			$value[] = $by_value;
+			if ($this->save($key, $value)) return $value;
+			else return false;
+		}
+		elseif (is_numeric($value) && is_numeric($by_value)) return apc_inc($this->prefix.$key, $by_value);
 		else
 		{
 			$value .= $by_value;
 			if ($this->save($key, $value)) return $value;
 			else return false;
 		}
-
 	}
 
 	/**

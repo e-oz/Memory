@@ -211,7 +211,7 @@ class MemoryObject_Test
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$this->mem->save(__METHOD__, 11, 1);
 		sleep(3);
-		$call = $this->mem->del_old(true);
+		$call = $this->mem->del_old();
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__);
 		if (!empty($check)) $result->Fail()->addDescription('variable still exists');
@@ -228,18 +228,30 @@ class MemoryObject_Test
 		$this->mem->save(__METHOD__, 100);
 		$call = $this->mem->increment(__METHOD__, 10);
 		$check = $this->mem->read(__METHOD__);
-		$result->Expected(array(true, 110))->Result(array($call, $check));
+		$result->Expected(array(110, 110))->Result(array($call, $check));
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->increment(__METHOD__, -10);
 		$check = $this->mem->read(__METHOD__);
-		$result->Expected(array(true, 100))->Result(array($call, $check));
+		$result->Expected(array(100, 100))->Result(array($call, $check));
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$this->mem->save(__METHOD__, 'string');
 		$call = $this->mem->increment(__METHOD__, 10);
 		$check = $this->mem->read(__METHOD__);
-		$result->Expected(array(true, 'string10'))->Result(array($call, $check));
+		$result->Expected(array('string10', 'string10'))->Result(array($call, $check));
+
+		$results[] = $result = new TestResult(__METHOD__.__LINE__);
+		$this->mem->save(__METHOD__, array(1, 2));
+		$call = $this->mem->increment(__METHOD__, 3);
+		$check = $this->mem->read(__METHOD__);
+		$result->Expected(array(array(1, 2, 3), array(1, 2, 3)))->Result(array($call, $check));
+
+		$results[] = $result = new TestResult(__METHOD__.__LINE__);
+		$this->mem->save(__METHOD__, array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11));
+		$call = $this->mem->increment(__METHOD__, 100, 10);
+		$check = $this->mem->read(__METHOD__);
+		$result->Expected(array(array(3, 4, 5, 6, 7, 8, 9, 10, 11, 100), array(3, 4, 5, 6, 7, 8, 9, 10, 11, 100)))->Result(array($call, $check));
 
 		return $results;
 	}

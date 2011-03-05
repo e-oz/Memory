@@ -95,7 +95,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 		$map = $this->mem_object->read('map');
-		if (array_key_exists($k, $map))
+		if (isset($map[$k]))
 		{
 			$this->ReportError('key already exists', __LINE__);
 			return false;
@@ -596,13 +596,13 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	}
 
 	/**
-	 * Increment
-	 *
-	 * @param mixed $key
-	 * @param integer $by_value
-	 * @return bool
+	 * Increment value of key.
+	 * @param string $key
+	 * @param mixed $by_value
+	 * @param int $limit_keys_count - maximum count of elements (new element will be pushed to the end of array)
+	 * @return int|string|array new value of key
 	 */
-	public function increment($key, $by_value = 1)
+	public function increment($key, $by_value = 1, $limit_keys_count = 0)
 	{
 		if (empty($key))
 		{
@@ -622,7 +622,12 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 			else return false;
 		}
 		$value = $this->read($key);
-		if (is_numeric($value) && is_numeric($by_value)) $value += $by_value;
+		if (is_array($value))
+		{
+			if ($limit_keys_count > 0 && (count($value) > $limit_keys_count)) $value = array_slice($value, $limit_keys_count*(-1)+1);
+			$value[] = $by_value;
+		}
+		elseif (is_numeric($value) && is_numeric($by_value)) $value += $by_value;
 		else $value .= $by_value;
 		$this->save($key, $value);
 		return $value;
@@ -1038,12 +1043,13 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 	}
 
 	/**
-	 * Increment
+	 * Increment value of key.
 	 * @param string $key
-	 * @param integer|string $by_value
-	 * @return bool
+	 * @param mixed $by_value
+	 * @param int $limit_keys_count - maximum count of elements (new element will be pushed to the end of array)
+	 * @return int|string|array new value of key
 	 */
-	public function increment($key, $by_value = 1)
+	public function increment($key, $by_value = 1, $limit_keys_count = 0)
 	{
 		if (empty($key))
 		{
@@ -1060,7 +1066,13 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 		$this->readmemory();
 		if (!isset($this->mem[self::map_keys][$key])) return $this->save($key, $by_value);
 
-		if (is_numeric($this->mem[self::map_keys][$key]) && is_numeric($by_value))
+		if (is_array($this->mem[self::map_keys][$key]))
+		{
+			if ($limit_keys_count > 0 && (count($this->mem[self::map_keys][$key]) > $limit_keys_count))
+				$this->mem[self::map_keys][$key] = array_slice($this->mem[self::map_keys][$key], $limit_keys_count*(-1)+1);
+			$value[] = $by_value;
+		}
+		elseif (is_numeric($this->mem[self::map_keys][$key]) && is_numeric($by_value))
 		{
 			$this->mem[self::map_keys][$key] += $by_value;
 		}
