@@ -6,20 +6,22 @@ As a storage can be used the shared memory or the APC extension.
 Features:
 * Tags for keys
 * Dog-pile and race-condition effects excluded
+* Increment can work with arrays, strings and numeric values
 * MultiAccess class can be used for any resource
 
+Usage:
+	For basic usage, download memory.inc and see demo.php to get documentation.
+	As advantage, MultiAccess and classes from mem.inc can be used, if APC is not installed on your server.
+
+Requirements:
 PHP version: 5.3
 For APCObject:
-	APC (http://pecl.php.net/package/APC) should be installed, and some settings should be added in php.ini (or apc.ini if you use it)
-	Required: apc.slam_defense = Off
-	Optional:
-	apc.ttl = 7200
-	apc.user_ttl = 3600
-	apc.shm_size = 64M
+	APC (http://pecl.php.net/package/APC) should be installed, and this setting should be added in php.ini (or apc.ini if you use it)
+	apc.slam_defense = Off
 
 For SHMObject and MultiAccess:
 	PHP should support shm-functions and msg-functions (--enable-shmop --enable-sysvsem --enable-sysvshm --enable-sysvmsg)
 
-Look at comments for info. Ask, what you want to see commented.
+Look at the comments for additional info. Ask, what you want to see commented.
 
 License: MIT
