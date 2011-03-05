@@ -64,7 +64,7 @@ interface IMemoryStorage
 	public function read($k, &$ttl_left = -1);
 
 	/**
-	 * Delete key or array of keys from storage (from map)
+	 * Delete key or array of keys from storage
 	 * @param string|array $k
 	 * @return boolean
 	 */
@@ -345,6 +345,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	const apc_arr_ctime = 'creation_time';
 	const apc_arr_ttl = 'ttl';
 	const apc_arr_value = 'value';
+	const apc_arr_atime = 'access_time';
 
 	/**
 	 * @param string $prefix
@@ -425,6 +426,8 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
+		$this->del_old();
+
 		if (!apc_store($this->prefix.$k, $v, intval($ttl)))
 		{
 			$this->ReportError('apc can not store key', __LINE__);
@@ -492,11 +495,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			if ($ttl_left!==-1)
 			{
 				$ttl_left = $this->getKeyTTL($k);
-				if ($ttl_left < 0)
-				{
-					$data = false; //key expired
-					$this->del_old();
-				}
+				if ($ttl_left < 0) $data = false; //key expired
 			}
 		}
 		return $data;
@@ -557,17 +556,27 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	public function del_old($force = false)
 	{
 		$t = time();
-		$previous_cleaning = apc_fetch($this->defragmentation_prefix);
+		$ittl = new APCIterator('user', '/^'.$this->defragmentation_prefix.'$/', APC_ITER_ATIME, 1);
+		$cttl = $ittl->current();
+		$previous_cleaning = $cttl[self::apc_arr_atime];
 		if (empty($previous_cleaning) || ($t-$previous_cleaning) > 1800 || !empty($force))
 		{
 			apc_store($this->defragmentation_prefix, $t, 1800);
 			$todel = array();
+			$apc_opcode_info = apc_cache_info('', true);
+			$apc_user_info = apc_cache_info('user', true);
+			$apc_ttl = min($apc_opcode_info['ttl'], $apc_user_info['ttl']);
+			if (!empty($apc_ttl)) $apc_ttl = $apc_ttl/2;
 
-			$i = new APCIterator('user', null, APC_ITER_TTL+APC_ITER_KEY+APC_ITER_CTIME);
+			$i = new APCIterator('user', null, APC_ITER_TTL+APC_ITER_KEY+APC_ITER_CTIME+APC_ITER_ATIME);
 			foreach ($i as $key)
 			{
 				if ($key[self::apc_arr_ttl] > 0 && ($t-$key[self::apc_arr_ctime]) > $key[self::apc_arr_ttl]) $todel[] = $key[self::apc_arr_key];
-				else apc_fetch($key[self::apc_arr_key]); //this operator is necessary to prevent deletion variables from cache by apc.ttl (they deletes not by their ttl+ctime, but apc.ttl+atime)
+				else
+				{
+					//this code is necessary to prevent deletion variables from cache by apc.ttl (they deletes not by their ttl+ctime, but apc.ttl+atime)
+					if ($apc_ttl > 0 && (($t-$key[self::apc_arr_atime]) > $apc_ttl)) apc_fetch($key[self::apc_arr_key]);
+				}
 			}
 			if (!empty($todel))
 			{
@@ -588,8 +597,6 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	public function del_by_tags($tags)
 	{
 		if (!is_array($tags)) $tags = array($tags);
-
-		$this->del_old();
 
 		$todel = array();
 		$l = strlen($this->tags_prefix);
@@ -700,10 +707,13 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	}
 
 	/**
-	 * Increment value of key.
+	 * Increment value of key
 	 * @param string $key
 	 * @param mixed $by_value
-	 * @param int $limit_keys_count - maximum count of elements (new will be pushed to the end of array)
+	 * if stored value is array:
+	 *			 if $by_value is value in array, new element will be pushed to the end of array,
+	 *			if $by_value is key=>value array, key=>value pair will be added (or updated)
+	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
 	 * @return int|string|array new value of key
 	 */
 	public function increment($key, $by_value = 1, $limit_keys_count = 0)
