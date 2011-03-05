@@ -105,10 +105,13 @@ interface IMemoryStorage
 	public function select_fx($fx, $get_array = false);
 
 	/**
-	 * Increment value of key.
+	 * Increment value of key
 	 * @param string $key
 	 * @param mixed $by_value
-	 * @param int $limit_keys_count - maximum count of elements (new element will be pushed to the end of array)
+	 * if stored value is array:
+	 *			 if $by_value is value in array, new element will be pushed to the end of array,
+	 *			if $by_value is key=>value array, key=>value pair will be added (or updated)
+	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
 	 * @return int|string|array new value of key
 	 */
 	public function increment($key, $by_value = 1, $limit_keys_count = 0);
@@ -245,11 +248,14 @@ class Memory
 	}
 
 	/**
-	 * Increment
-	 *
-	 * @param mixed $key
-	 * @param int $by_value
-	 * @return bool
+	 * Increment value of key
+	 * @param string $key
+	 * @param mixed $by_value
+	 * if stored value is array:
+	 *			 if $by_value is value in array, new element will be pushed to the end of array,
+	 *			if $by_value is key=>value array, key=>value pair will be added (or updated)
+	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
+	 * @return int|string|array new value of key
 	 */
 	public static function increment($key, $by_value = 1, $limit_keys_count = 0)
 	{
@@ -552,7 +558,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		$t = time();
 		$previous_cleaning = apc_fetch($this->defragmentation_prefix);
-		if (empty($previous_cleaning) || ($t-$previous_cleaning) > 1800 || $force)
+		if (empty($previous_cleaning) || ($t-$previous_cleaning) > 1800 || !empty($force))
 		{
 			apc_store($this->defragmentation_prefix, $t, 1800);
 			$todel = array();
@@ -561,6 +567,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			foreach ($i as $key)
 			{
 				if ($key[self::apc_arr_ttl] > 0 && ($t-$key[self::apc_arr_ctime]) > $key[self::apc_arr_ttl]) $todel[] = $key[self::apc_arr_key];
+				else apc_fetch($key[self::apc_arr_key]); //this operator is necessary to prevent deletion variables from cache by apc.ttl (they deletes not by their ttl+ctime, but apc.ttl+atime)
 			}
 			if (!empty($todel))
 			{
@@ -715,7 +722,15 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		if (is_array($value))
 		{
 			if ($limit_keys_count > 0 && (count($value) > $limit_keys_count)) $value = array_slice($value, $limit_keys_count*(-1)+1);
-			$value[] = $by_value;
+
+			if (is_array($by_value))
+			{
+				$set_key = key($by_value);
+				if (!empty($set_key)) $value[$set_key] = $by_value[$set_key];
+				else $value[] = $by_value[0];
+			}
+			else $value[] = $by_value;
+
 			if ($this->save($key, $value)) return $value;
 			else return false;
 		}

@@ -625,7 +625,13 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 		if (is_array($value))
 		{
 			if ($limit_keys_count > 0 && (count($value) > $limit_keys_count)) $value = array_slice($value, $limit_keys_count*(-1)+1);
-			$value[] = $by_value;
+			if (is_array($by_value))
+			{
+				$set_key = key($by_value);
+				if (!empty($set_key)) $value[$set_key] = $by_value[$set_key];
+				else $value[] = $by_value[0];
+			}
+			else $value[] = $by_value;
 		}
 		elseif (is_numeric($value) && is_numeric($by_value)) $value += $by_value;
 		else $value .= $by_value;
@@ -1066,23 +1072,28 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 		$this->readmemory();
 		if (!isset($this->mem[self::map_keys][$key])) return $this->save($key, $by_value);
 
-		if (is_array($this->mem[self::map_keys][$key]))
+		$value = $this->mem[self::map_keys][$key];
+		if (is_array($value))
 		{
-			if ($limit_keys_count > 0 && (count($this->mem[self::map_keys][$key]) > $limit_keys_count))
-				$this->mem[self::map_keys][$key] = array_slice($this->mem[self::map_keys][$key], $limit_keys_count*(-1)+1);
-			$value[] = $by_value;
+			if ($limit_keys_count > 0 && (count($value) > $limit_keys_count)) $value = array_slice($value, $limit_keys_count*(-1)+1);
+			if (is_array($by_value))
+			{
+				$set_key = key($by_value);
+				if (!empty($set_key)) $value[$set_key] = $by_value[$set_key];
+				else $value[] = $by_value[0];
+			}
+			else $value[] = $by_value;
 		}
-		elseif (is_numeric($this->mem[self::map_keys][$key]) && is_numeric($by_value))
+		elseif (is_numeric($value) && is_numeric($by_value))
 		{
-			$this->mem[self::map_keys][$key] += $by_value;
+			$value += $by_value;
 		}
 		else
 		{
-			$this->mem[self::map_keys][$key] .= $by_value;
+			$value .= $by_value;
 		}
 
-		$value = $this->mem[self::map_keys][$key];
-
+		$this->mem[self::map_keys][$key] = $value;
 		$this->refresh();
 		return $value;
 	}

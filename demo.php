@@ -35,6 +35,11 @@ Memory::increment('key_s', 'defg'); //now key_s = 'abcdefg'
 Memory::save('log', array('start'));
 Memory::increment('log', 'message'); //now 'log' = array('start','message')
 Memory::increment('log', 'new message', 2); //now 'log' = array('message', 'new message')
+//or without initial array:
+Memory::increment('users', array('user1')); //now 'users' = array('user1')
+Memory::increment('users', array('users2')); //now 'users' = array('user1', 'user2')
+//and set pair key-value:
+Memory::increment('users', array('admin' => 'user3')); //now 'users' = array('user1', 'user2', 'admin' => 'user3')
 
 /** Tags */
 Memory::save('user_login', 'Adam', 86400, array('users', 'logins'));

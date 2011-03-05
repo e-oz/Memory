@@ -211,7 +211,7 @@ class MemoryObject_Test
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$this->mem->save(__METHOD__, 11, 1);
 		sleep(3);
-		$call = $this->mem->del_old();
+		$call = $this->mem->del_old(array(true));
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__);
 		if (!empty($check)) $result->Fail()->addDescription('variable still exists');
@@ -246,6 +246,19 @@ class MemoryObject_Test
 		$call = $this->mem->increment(__METHOD__, 3);
 		$check = $this->mem->read(__METHOD__);
 		$result->Expected(array(array(1, 2, 3), array(1, 2, 3)))->Result(array($call, $check));
+
+		$results[] = $result = new TestResult(__METHOD__.__LINE__);
+		$this->mem->increment(__METHOD__.'inc', array('a'));
+		$this->mem->increment(__METHOD__.'inc', array('b'));
+		$check = $this->mem->read(__METHOD__.'inc');
+		$result->Expected(array('a', 'b'))->Result($check);
+
+		$results[] = $result = new TestResult(__METHOD__.__LINE__);
+		$this->mem->increment(__METHOD__.'inc', array('k1' => 'a'));
+		$this->mem->increment(__METHOD__.'inc', array('k2' => 'b'));
+		$this->mem->increment(__METHOD__.'inc', array('k2' => 'c'));
+		$check = $this->mem->read(__METHOD__.'inc');
+		$result->Expected(array('a', 'b', 'k1' => 'a', 'k2' => 'c'))->Result($check);
 
 		$results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$this->mem->save(__METHOD__, array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11));
