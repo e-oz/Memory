@@ -139,7 +139,7 @@ interface IMemoryStorage
 
 class Memory
 {
-	/** @var APCObject */
+	/** @var IMemoryStorage */
 	private static $memory_object;
 
 	public static function getMemoryObject()
@@ -259,7 +259,7 @@ class Memory
 	 */
 	public static function increment($key, $by_value = 1, $limit_keys_count = 0)
 	{
-		return self::getMemoryObject()->increment($key, $by_value);
+		return self::getMemoryObject()->increment($key, $by_value, $limit_keys_count);
 	}
 
 	public static function ini(IMemoryStorage $MemoryObject = NULL)
@@ -295,13 +295,13 @@ class Memory
 		return self::getMemoryObject()->unlock_key($auto_unlocker);
 	}
 
-	public function getLastErr()
+	public static function getLastErr()
 	{
 		return self::getMemoryObject()->getLastErr();
 	}
 
 	/** Return array of all stored keys */
-	public function get_keys()
+	public static function get_keys()
 	{
 		return self::getMemoryObject()->get_keys();
 	}
