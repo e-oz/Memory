@@ -18,6 +18,7 @@ PHP version: 5.3
 For APCObject:
 	APC (http://pecl.php.net/package/APC) should be installed, and this setting should be added in php.ini (or apc.ini if you use it)
 	apc.slam_defense = Off
+	recommended: apc.user_ttl = 0
 
 For SHMObject and MultiAccess:
 	PHP should support shm-functions and msg-functions (--enable-shmop --enable-sysvsem --enable-sysvshm --enable-sysvmsg)

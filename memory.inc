@@ -202,13 +202,13 @@ class Memory
 	}
 
 	/**
-	 * Delete old (by ttl) variables from storage (map)
+	 * Delete old (by ttl) variables from storage
 	 *
 	 * @return boolean
 	 */
-	public static function del_old(Array $with_keys = NULL)
+	public static function del_old()
 	{
-		return self::getMemoryObject()->del_old($with_keys);
+		return self::getMemoryObject()->del_old();
 	}
 
 	/**
@@ -561,15 +561,14 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	public function del_old($force = false)
 	{
 		$t = time();
-		$check_period = 1800;
-		$apc_opcode_info = apc_cache_info('', true);
 		$apc_user_info = apc_cache_info('user', true);
-		$apc_ttl = min($apc_opcode_info['ttl'], $apc_user_info['ttl']);
-		if (!empty($apc_ttl))
+		$apc_ttl = 0;
+		if (!empty($apc_user_info['ttl']))
 		{
-			$apc_ttl = $apc_ttl/2;
+			$apc_ttl = $apc_user_info['ttl']/2;
 			$check_period = $apc_ttl;
 		}
+		if (empty($check_period) || $check_period > 1800) $check_period = 1800;
 
 		$ittl = new APCIterator('user', '/^'.$this->defragmentation_prefix.'$/', APC_ITER_ATIME, 1);
 		$cttl = $ittl->current();
