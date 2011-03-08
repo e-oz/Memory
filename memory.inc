@@ -2,7 +2,6 @@
 
 /**
  * @author OZ
- * @copyright 2010-2011
  * license MIT
  */
 
@@ -46,8 +45,8 @@ interface IMemoryStorage
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k
-	 * @param mixed $v
+	 * @param string $k - key
+	 * @param mixed $v - value
 	 * @param int $ttl - time to live (store) in seconds
 	 * @param array|string $tags - array of tags for this key
 	 * @return bool
@@ -65,8 +64,8 @@ interface IMemoryStorage
 
 	/**
 	 * Delete key or array of keys from storage
-	 * @param string|array $k
-	 * @return boolean
+	 * @param string|array $k - keys
+	 * @return boolean|array - if array of keys was passed, on error will be returned array of not deleted keys, or 'true' on success.
 	 */
 	public function del($k);
 
@@ -86,6 +85,7 @@ interface IMemoryStorage
 
 	/**
 	 * Select from storage by params
+	 * Only values of 'array' type will be selected
 	 * k - key, r - relation, v - value
 	 * relations: "<", ">", "=" or "==", "!=" or "<>"
 	 * example: select(array(array('k'=>'user_id',	'r'=>'<',	'v'=>1))); - select where user_id<1
@@ -97,7 +97,7 @@ interface IMemoryStorage
 
 	/**
 	 * Select from storage via callback function
-	 *
+	 * Only values of 'array' type will be selected
 	 * @param callback $fx ($value_array,$key)
 	 * @param bool $get_array
 	 * @return mixed
@@ -157,6 +157,7 @@ class Memory
 	 * @param string $k
 	 * @param mixed $v
 	 * @param int $ttl
+	 * @param array|string $tags
 	 * @return boolean
 	 */
 	public static function add($k, $v, $ttl = 259200, $tags = NULL)
@@ -167,10 +168,10 @@ class Memory
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k
-	 * @param mixed $v
+	 * @param string $k - key
+	 * @param mixed $v - value
 	 * @param int $ttl - time to live (store) in seconds
-	 * @param array $tags - array of tags for this key
+	 * @param array|string $tags - array of tags for this key
 	 * @return bool
 	 */
 	public static function save($k, $v, $ttl = 259200, $tags = NULL)
@@ -181,7 +182,7 @@ class Memory
 	/**
 	 * Read data from memory storage
 	 *
-	 * @param mixed $k (string or array of string keys)
+	 * @param string|array $k (string or array of string keys)
 	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
 	 * @return mixed
 	 */
@@ -191,10 +192,9 @@ class Memory
 	}
 
 	/**
-	 * Delete key or array of keys from storage (from map)
-	 *
-	 * @param mixed $k
-	 * @return boolean
+	 * Delete key or array of keys from storage
+	 * @param string|array $k - keys
+	 * @return boolean|array - if array of keys was passed, on error will be returned array of not deleted keys, or 'true' on success.
 	 */
 	public static function del($k)
 	{
@@ -224,7 +224,9 @@ class Memory
 
 	/**
 	 * Select from storage by params
+	 * Only values of 'array' type will be selected
 	 * k - key, r - relation, v - value
+	 * relations: "<", ">", "=" or "==", "!=" or "<>"
 	 * example: select(array(array('k'=>'user_id',	'r'=>'<',	'v'=>1))); - select where user_id<1
 	 * @param array $params
 	 * @param bool $get_array
@@ -237,8 +239,8 @@ class Memory
 
 	/**
 	 * Select from storage via callback function
-	 *
-	 * @param callback $fx
+	 * Only values of 'array' type will be selected
+	 * @param callback $fx ($value_array,$key)
 	 * @param bool $get_array
 	 * @return mixed
 	 */
@@ -520,7 +522,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	}
 
 	/**
-	 * Delete key or array of keys from storage (from map)
+	 * Delete key or array of keys from storage
 	 * @param string|array $k
 	 * @return boolean
 	 */
@@ -558,7 +560,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 * It's very important function to prevent APC's cache fragmentation.
 	 * @return boolean
 	 */
-	public function del_old($force = false)
+	public function del_old()
 	{
 		$t = time();
 		$apc_user_info = apc_cache_info('user', true);
@@ -573,7 +575,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		$ittl = new APCIterator('user', '/^'.$this->defragmentation_prefix.'$/', APC_ITER_ATIME, 1);
 		$cttl = $ittl->current();
 		$previous_cleaning = $cttl[self::apc_arr_atime];
-		if (empty($previous_cleaning) || ($t-$previous_cleaning) > $check_period || !empty($force))
+		if (empty($previous_cleaning) || ($t-$previous_cleaning) > $check_period)
 		{
 			apc_store($this->defragmentation_prefix, $t, $check_period);
 			$todel = array();

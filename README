@@ -11,7 +11,7 @@ Features:
 
 Usage:
 	For basic usage, download memory.inc and see demo.php to get documentation.
-	As advantage, MultiAccess and classes from mem.inc can be used, if APC is not installed on your server.
+	As advantage, MultiAccess and classes from mem.inc can be used, or if APC is not installed on your server.
 
 Requirements:
 PHP version: 5.3
