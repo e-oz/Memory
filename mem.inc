@@ -1,5 +1,7 @@
 <?php
 
+//Deprecated
+
 interface ISingleMemory extends IMemoryStorage
 {
 	public function getSingleMemory();
