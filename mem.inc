@@ -1,6 +1,6 @@
 <?php
 
-//Deprecated
+//Deprecated.
 
 interface ISingleMemory extends IMemoryStorage
 {
