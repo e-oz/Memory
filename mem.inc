@@ -1,6 +1,9 @@
 <?php
 
-//Deprecated.
+/**
+ * Using this class is deprecated.
+ * Use APCObject instead of SHMObject - it's faster and works even in CLI.
+**/
 
 interface ISingleMemory extends IMemoryStorage
 {
