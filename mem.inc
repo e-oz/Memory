@@ -3,7 +3,7 @@
 /**
  * Using this class is deprecated.
  * Use APCObject instead of SHMObject - it's faster and works even in CLI.
-**/
+ **/
 
 interface ISingleMemory extends IMemoryStorage
 {
@@ -38,7 +38,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	 * @param string $id
 	 * @param integer $size
 	 * @param integer $maxsize
-	 * @return boolean
+	 * @return \SHMObject
 	 */
 	public function __construct($id = '', $size = 0, $maxsize = 0)
 	{
@@ -84,7 +84,8 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	 * @param string $k
 	 * @param mixed $v
 	 * @param integer $ttl
-	 * @return boolean
+	 * @param $tags null
+	 * @return bool
 	 */
 	public function add($k, $v, $ttl = 259200, $tags = NULL)
 	{
@@ -226,7 +227,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Find free space in map to store data
 	 * @access private
-	 * @param mixed $map
+	 * @param array|mixed $map
 	 * @param mixed $size
 	 * @return int
 	 */
@@ -766,6 +767,7 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 	/**
 	 * Read key value from memory
 	 * @param string|array $k
+	 * @param $ttl_left
 	 * @return mixed
 	 */
 	public function read($k, &$ttl_left = -1)
