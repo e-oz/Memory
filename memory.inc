@@ -78,7 +78,7 @@ interface IMemoryStorage
 	/**
 	 * Delete keys by tags
 	 *
-	 * @param array|string $tags - tag or array of tags
+	 * @param array|string $tag - tag or array of tags
 	 * @return boolean
 	 */
 	public function del_by_tags($tag);
