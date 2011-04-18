@@ -20,7 +20,6 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	 * @param string $prefix Symbol "." will be replaced to "_"
 	 * @param string $host
 	 * @param int $port
-	 * @param int $weight
 	 */
 	public function __construct($prefix = '', $host = 'localhost', $port = 11211)
 	{

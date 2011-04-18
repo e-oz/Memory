@@ -8,6 +8,9 @@
 $mem = new APCObject('my_cacher');
 // or initialize Memory class with your object (implements IMemoryObject interface)
 Memory::ini(new SHMObject(__FILE__));
+// APC is approx. 14 time faster than Memcache, but Memcache can be used more universally, and is more flexible.
+// for example, Memcache can be used with mod_php and php-cli (from cron) or other applications.
+Memory::ini(new MemcacheObject());
 
 /** Save variable: */
 Memory::save('key', 'value');

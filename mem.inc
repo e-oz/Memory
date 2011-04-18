@@ -1,10 +1,5 @@
 <?php
 
-/**
- * Using this class is deprecated.
- * Use APCObject instead of SHMObject - it's faster and works even in CLI.
- **/
-
 interface ISingleMemory extends IMemoryStorage
 {
 	public function getSingleMemory();
@@ -728,7 +723,6 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 	const map_key_tags = 'tags';
 	const map_key_locks = 'locks';
 	const map_key_cleantime = 'clean';
-	const max_ttl = 2592000;
 
 	public function save($k, $v, $ttl = 2592000, $tags = NULL)
 	{

@@ -142,6 +142,9 @@ class Memory
 	/** @var IMemoryStorage */
 	private static $memory_object;
 
+	/**
+	 * @return IMemoryStorage
+	 */
 	public static function getMemoryObject()
 	{
 		if (empty(self::$memory_object))
@@ -311,6 +314,8 @@ class Memory
 
 abstract class MemoryObject
 {
+	const max_ttl = 2592000;
+
 	protected $last_err;
 	protected $err_log;
 
@@ -342,7 +347,6 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	const lock_key_prefix = '.lock_key.';
 	const defragmentation_prefix = '.clean.';
 	const tags_prefix = '.tags.';
-	const max_ttl = 2592000;
 	const apc_arr_key = 'key';
 	const apc_arr_ctime = 'creation_time';
 	const apc_arr_ttl = 'ttl';
@@ -723,8 +727,8 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 * @param string $key
 	 * @param mixed $by_value
 	 * if stored value is array:
-	 *			 if $by_value is value in array, new element will be pushed to the end of array,
-	 *			if $by_value is key=>value array, key=>value pair will be added (or updated)
+	 *	if $by_value is value in array, new element will be pushed to the end of array,
+	 *	if $by_value is key=>value array, key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
 	 * @return int|string|array new value of key
 	 */
