@@ -134,7 +134,15 @@ interface IMemoryStorage
 	/** Return array of all stored keys */
 	public function get_keys();
 
+	/**
+	 * @return string
+	 */
 	public function getLastErr();
+
+	/**
+	 * @return array
+	 */
+	public function get_stat();
 }
 
 class Memory
@@ -309,6 +317,14 @@ class Memory
 	public static function get_keys()
 	{
 		return self::getMemoryObject()->get_keys();
+	}
+
+	/**
+	 * @return array
+	 */
+	public function get_stat()
+	{
+		return self::getMemoryObject()->get_stat();
 	}
 }
 
@@ -803,5 +819,16 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		}
 		$auto_unlocker->revoke();
 		return apc_delete($this->lock_key_prefix.$auto_unlocker->key);
+	}
+
+	/**
+	 * @return array
+	 */
+	public function get_stat()
+	{
+		return array(
+			'system' => apc_cache_info('', true),
+			'user' => apc_cache_info('user', true)
+		);
 	}
 }
