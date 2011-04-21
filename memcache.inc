@@ -9,7 +9,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	protected $ttl_table_name;
 	/** @var string $tags_table_name array (key=>array(tags)) */
 	protected $tags_table_name;
-	/** @var \Memcache */
+	/** @var IMemcacheDecorator */
 	protected $memcache;
 
 	const lock_key_prefix = '.lock_key.';
@@ -65,7 +65,10 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 
 		if (!$this->memcache->add($this->prefix.$k, $v, null, $ttl))
 		{
-			$this->ReportError('key already exists', __LINE__);
+			$reason = 'key already exists';
+			if (strlen($this->prefix.$k) > 250) $reason = 'key length should be <250';
+			elseif (strlen(serialize($v)) > 1048576) $reason = 'size of value should be <1Mb';
+			$this->ReportError('can not add key: '.$reason, __LINE__);
 			return false;
 		}
 
@@ -329,6 +332,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			$data = $this->memcache->get($this->prefix.$k);
 			if ($data===false || $data===null)
 			{
+				if (strlen($this->prefix.$k) > 250) $this->ReportError('Length of key should be <250', __LINE__);
 				return false;
 			}
 			if ($ttl_left!==-1)
@@ -365,7 +369,11 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 
 		if (false===$this->memcache->set($this->prefix.$k, $v, 0, $ttl))
 		{
-			$this->ReportError('memcache can not store key '.$this->prefix.$k, __LINE__);
+			$reason = $this->prefix.$k;
+			if (strlen($this->prefix.$k) > 250) $reason = 'key length should be <250';
+			elseif (strlen(serialize($v)) > 1048576) $reason = 'size of value should be <1Mb';
+			$this->ReportError('can not add key: '.$reason, __LINE__);
+			$this->ReportError('memcache can not store key: '.$reason, __LINE__);
 			return false;
 		}
 
@@ -544,19 +552,31 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('memcache can not save ttl table', __LINE__);
 		}
 	}
+
+	/**
+	 * @return array
+	 */
+	public function get_stat()
+	{
+		return $this->memcache->getStats();
+	}
 }
 
 interface IMemcacheDecorator
 {
-	public function add($key, &$var, $flag = null, $ttl = 0);
+	public function add($key, $var, $flag = null, $ttl = 0);
 
 	public function get($key);
 
 	public function delete($key);
 
-	public function set($key, &$value, $flag = null, $ttl = 0);
+	public function set($key, $value, $flag = null, $ttl = 0);
 
 	public function increment($key, $by_value);
+
+	public function connect($host = 'localhost', $port = 11211);
+
+	public function getStats();
 }
 
 class MemcachedDecorator implements IMemcacheDecorator
@@ -571,7 +591,7 @@ class MemcachedDecorator implements IMemcacheDecorator
 		$this->memcached->setOption(Memcached::OPT_COMPRESSION, true);
 	}
 
-	public function add($key, &$var, $flag = null, $ttl = 0)
+	public function add($key, $var, $flag = null, $ttl = 0)
 	{
 		return $this->memcached->add($key, $var, $ttl);
 	}
@@ -591,9 +611,17 @@ class MemcachedDecorator implements IMemcacheDecorator
 		return $this->memcached->increment($key, $by_value);
 	}
 
-	public function set($key, &$value, $flag = null, $ttl = 0)
+	public function set($key, $value, $flag = null, $ttl = 0)
 	{
 		return $this->memcached->set($key, $value, $ttl);
+	}
+
+	public function connect($host = 'localhost', $port = 11211)
+	{ }
+
+	public function getStats()
+	{
+		return $this->memcached->getStats();
 	}
 }
 
