@@ -502,6 +502,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			$ttl_left = array();
 			foreach ($k as $key)
 			{
+				$key = (string)$key;
 				$data[$key] = apc_fetch($this->prefix.$key, $success);
 				if (!$success)
 				{

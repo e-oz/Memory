@@ -89,6 +89,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('empty keys and values are not allowed', __LINE__);
 			return false;
 		}
+		$k = (string)$k;
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
@@ -144,6 +145,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
+		$k = (string)$k;
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
@@ -296,6 +298,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 			$to_points = array();
 			foreach ($k as $key)
 			{
+				$key = (string)$key;
 				if (!array_key_exists($key, $map)) continue;
 				if (!empty($map[$key][self::map_key_ttl]) && $map[$key][self::map_key_ttl] < time())
 				{
@@ -325,6 +328,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 		}
 		else
 		{
+			$k = (string)$k;
 			if (!array_key_exists($k, $map))
 			{
 				$this->ReportError('key are not in map', __LINE__);
@@ -428,9 +432,17 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 		$map = $this->mem_object->read('map');
 		if (is_array($k))
 		{
-			foreach ($k as $key) unset($map[$key]);
+			foreach ($k as $key)
+			{
+				$key = (string)$key;
+				unset($map[$key]);
+			}
 		}
-		else unset($map[$k]);
+		else
+		{
+			$k = (string)$k;
+			unset($map[$k]);
+		}
 		$r = $this->mem_object->save('map', $map);
 		if ($r===false)
 		{
@@ -731,6 +743,7 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 			$this->ReportError('empty key and null value are not allowed', __LINE__);
 			return false;
 		}
+		$k = (string)$k;
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
@@ -781,6 +794,7 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 			$ttl_left = array();
 			foreach ($k as $ki)
 			{
+				$ki = (string)$ki;
 				if (!isset($this->mem[self::map_keys][$ki])) continue;
 				$ttl_left[$ki] = $this->get_key_ttl($ki, $this->mem);
 				if ($ttl_left[$ki] <= 0) continue;
@@ -798,6 +812,7 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 		}
 		else
 		{
+			$k = (string)$k;
 			$r = $this->mem[self::map_keys][$k];
 			$ttl_left = $this->get_key_ttl($k, $this->mem);
 			if ($ttl_left <= 0) $r = NULL;
@@ -846,6 +861,7 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 		if (!is_array($k)) $k = array($k);
 		foreach ($k as $key)
 		{
+			$key = (string)$key;
 			unset($this->mem[self::map_keys][$key]);
 			unset($this->mem[self::map_key_ttl][$key]);
 			if (!empty($this->mem[self::map_key_tags]))
@@ -884,6 +900,7 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 			return false;
 		}
 
+		$key = (string)$key;
 		$this->readmemory();
 		if (isset($this->mem[self::map_keys][$key]))
 		{
@@ -1069,6 +1086,7 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
+		$key = (string)$key;
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
@@ -1120,6 +1138,7 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 			return false;
 		}
 		$this->readmemory();
+		$key = (string)$key;
 
 		if (isset($this->mem[self::map_key_locks][$key]))
 		{

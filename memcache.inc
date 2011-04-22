@@ -31,7 +31,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		}
 
 		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
-		$this->ttl_table_name = self::ttl_table_prefix;
+		$this->ttl_table_name = self::ttl_table_prefix.$this->prefix;
 		$this->tags_table_name = self::tags_table_prefix.$this->prefix;
 	}
 
@@ -60,6 +60,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
+		$k = (string)$k;
 
 		$ttl = $this->ttl_to_expiration($ttl);
 
@@ -121,6 +122,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		{
 			foreach ($key as $k)
 			{
+				$k = (string)$k;
 				$this->memcache->delete($this->prefix.$k);
 				$this->memcache->delete($this->lock_key_prefix.$k);
 				if (array_key_exists($k, $tags_table))
@@ -310,6 +312,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			$ttl_left = array();
 			foreach ($k as $key)
 			{
+				$key = (string)$key;
 				$data[$key] = $this->memcache->get($this->prefix.$key);
 				if ($data[$key]===false || $data[$key]===null)
 				{
@@ -365,6 +368,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
+		$k = (string)$k;
 		$ttl = $this->ttl_to_expiration($ttl);
 
 		if (false===$this->memcache->set($this->prefix.$k, $v, 0, $ttl))
@@ -514,6 +518,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 
 		if (!empty($tags))
 		{
+			$key = (string)$key;
 			$tags_table = $this->memcache->get($this->tags_table_name);
 			if (empty($tags_table)) $tags_table = array();
 			if (!array_key_exists($key, $tags_table) || $tags!=$tags_table[$key])
@@ -529,6 +534,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	public function getKeyTTL($key)
 	{
 		$ttl_table = $this->read_TTL_table();
+		$key = (string)$key;
 		if (!array_key_exists($key, $ttl_table)) return false;
 		else return ($ttl_table[$key]-time());
 	}
