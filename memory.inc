@@ -143,6 +143,8 @@ interface IMemoryStorage
 	 * @return array
 	 */
 	public function get_stat();
+
+	public function getErrLog();
 }
 
 class Memory
@@ -325,6 +327,11 @@ class Memory
 	public static function get_stat()
 	{
 		return self::getMemoryObject()->get_stat();
+	}
+
+	public static function getErrLog()
+	{
+		return self::getMemoryObject()->getErrLog();
 	}
 }
 
