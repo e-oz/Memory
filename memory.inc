@@ -322,7 +322,7 @@ class Memory
 	/**
 	 * @return array
 	 */
-	public function get_stat()
+	public static function get_stat()
 	{
 		return self::getMemoryObject()->get_stat();
 	}
