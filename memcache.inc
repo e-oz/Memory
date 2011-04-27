@@ -543,7 +543,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	 * @param array $table
 	 * @return void
 	 */
-	protected function save_TTL_table(&$table)
+	protected function save_TTL_table($table)
 	{
 		if (!empty($table))
 		{
