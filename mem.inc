@@ -925,7 +925,6 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 	 * Select from memory elements, where element[$k] in relation $r with value $v
 	 * $k,$r and $v given in array $params
 	 * if $get_array - return array of matched elements, else - first element.
-	 * @deprecated
 	 * @param array $params
 	 * @param bool $get_array
 	 * @return mixed
