@@ -28,12 +28,9 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	const max_ttl = 2592000;
 
 	/**
-	 * Initialize (constructor)
-	 *
-	 * @param string $id
-	 * @param integer $size
+	 * @param string $id path to existing file, __FILE__ usually, will define scope (like prefix).
+	 * @param integer $size initial size of the memory block in bites
 	 * @param integer $maxsize
-	 * @return \SHMObject
 	 */
 	public function __construct($id = '', $size = 0, $maxsize = 0)
 	{
@@ -76,10 +73,10 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Add value to memory storage, only if this key does not exists (or false will be returned).
 	 *
-	 * @param string $k
-	 * @param mixed $v
-	 * @param integer $ttl
-	 * @param $tags null
+	 * @param string $k key
+	 * @param mixed $v value
+	 * @param integer $ttl Time To Live in seconds (value will be added to the current time)
+	 * @param array|string $tags tag array of tags for this key
 	 * @return bool
 	 */
 	public function add($k, $v, $ttl = 259200, $tags = NULL)
@@ -107,12 +104,12 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 
 	/**
 	 * Write data to storage directly
-	 * @access private
-	 * @param mixed $data (string or array)
-	 * @param mixed $start (integer or array)
+	 *
+	 * @param string|array $data
+	 * @param int|array $start
 	 * @return bool
 	 */
-	protected function write_data(&$data, $start)
+	protected function write_data($data, $start)
 	{
 		$r = 0;
 		if (is_array($start) && is_array($data))
@@ -131,10 +128,10 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k
-	 * @param mixed $v
-	 * @param integer $ttl - time to live (store) in seconds
-	 * @param array $tags - array of tags for this key
+	 * @param string $k key
+	 * @param mixed $v value
+	 * @param integer $ttl Time To Live in seconds (value will be added to the current time)
+	 * @param string|array $tags tag array of tags for this key
 	 * @return bool
 	 */
 	public function save($k, $v, $ttl = 259200, $tags = NULL)
@@ -177,7 +174,8 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 				if ($size <= ($map[$k][self::map_key_fin]-$map[$k][self::map_key_start])) $start = $map[$k][self::map_key_start];
 				else
 				{
-					$this->del_old(array($k));
+					$this->del($k);
+					$this->del_old();
 					$map = $this->mem_object->read('map');
 					$start = $this->find_free_space($map, $size);
 					if ($start===false)
@@ -223,9 +221,8 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 
 	/**
 	 * Find free space in map to store data
-	 * @access private
-	 * @param array|mixed $map
-	 * @param mixed $size
+	 * @param array $map
+	 * @param int $size
 	 * @return int
 	 */
 	protected function find_free_space(array $map, $size)
@@ -234,8 +231,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 		if ($c < 1) return 0;
 		$_end = $this->max_size;
 		usort($map, array(__CLASS__, 'sort_map'));
-		$imap = array();
-		foreach ($map as &$v) $imap[] = $v;
+		$imap = array_values($map);
 		$i = 0;
 		$eoa = $c-1; //end of array
 		if ($imap[0][0] > $size) return 0;
@@ -244,7 +240,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 			$free_from = $imap[$i][self::map_key_fin]+1;
 			if ($i==$eoa) $free_to = $_end;
 			else $free_to = $imap[($i+1)][self::map_key_start]-1;
-			if (($free_to-$free_from) > $size) return $free_from;
+			if (($free_to-$free_from) >= $size) return $free_from;
 		}
 		$this->ReportError('Can not find enough space in memory', __LINE__);
 		return false;
@@ -253,9 +249,10 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Sort map by start value at map
 	 * This function are public only for the function "usort", she should not be used in interface.
-	 * @param mixed $a
-	 * @param mixed $b
-	 * @return mixed
+	 * @access private
+	 * @param array $a
+	 * @param array $b
+	 * @return int
 	 */
 	public function sort_map($a, $b)
 	{
@@ -267,8 +264,8 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Read data from memory storage
 	 *
-	 * @param mixed $k (string or array of string keys)
-	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
+	 * @param string|array $k key or array of keys
+	 * @param int $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
 	 * @return mixed
 	 */
 	public function read($k, &$ttl_left = -1)
@@ -390,9 +387,10 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Read data from storage directly
 	 *
-	 * @param mixed $from (integer or array of integers)
-	 * @param mixed $to (integer or array of integers)
-	 * @return
+	 * @param int|array $from (integer or array of integers)
+	 * @param int|array $to (integer or array of integers)
+	 * @param array $keys
+	 * @return string
 	 */
 	protected function read_data($from, $to, Array $keys = NULL)
 	{
@@ -413,7 +411,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Delete key or array of keys from storage (from map)
 	 *
-	 * @param mixed $k
+	 * @param string|array $k key or array of keys
 	 * @return boolean
 	 */
 	public function del($k)
@@ -454,10 +452,9 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 
 	/**
 	 * Delete old (by ttl) variables from storage (map)
-	 *
 	 * @return boolean
 	 */
-	public function del_old(Array $with_keys = NULL)
+	public function del_old()
 	{
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
@@ -472,7 +469,6 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 		{
 			if (!empty($v[self::map_key_ttl]) && $v[self::map_key_ttl] < time()) $todel[] = $k;
 		}
-		if (!empty($with_keys)) $todel = array_merge($todel, $with_keys);
 		if (!empty($todel)) $r = $this->del($todel);
 		return $r;
 	}
@@ -511,6 +507,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	 * Select from storage by params
 	 * k - key, r - relation, v - value
 	 * example: select(array(array('k'=>'user_id',	'r'=>'<',	'v'=>1))); - select where user_id<1
+	 * @deprecated
 	 * @param array $params
 	 * @param bool $get_array
 	 * @return mixed
@@ -579,7 +576,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Select from storage via callback function
 	 *
-	 * @param callback $fx
+	 * @param callback $fx ($value, $index)
 	 * @param bool $get_array
 	 * @return mixed
 	 */
@@ -655,6 +652,10 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 		return $value;
 	}
 
+	/**
+	 * Returns statistic information
+	 * @return array
+	 */
 	public function get_stat()
 	{
 		$stat = array();
@@ -736,6 +737,13 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 	const map_key_locks = 'locks';
 	const map_key_cleantime = 'clean';
 
+	/**
+	 * @param string $k key
+	 * @param mixed $v value
+	 * @param int $ttl time to live
+	 * @param string|array $tags
+	 * @return bool|void
+	 */
 	public function save($k, $v, $ttl = 2592000, $tags = NULL)
 	{
 		if (empty($k) || $v===NULL)
@@ -763,7 +771,8 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 			foreach ($tags as $tag)
 			{
 				if (empty($this->mem[self::map_key_tags][$tag])
-					|| !in_array($k, $this->mem[self::map_key_tags][$tag]))
+					|| !in_array($k, $this->mem[self::map_key_tags][$tag])
+				)
 					$this->mem[self::map_key_tags][$tag][] = $k;
 			}
 		}
@@ -887,6 +896,7 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 	 * @param string $key
 	 * @param mixed $value
 	 * @param int $ttl
+	 * @param string|array $tags
 	 * @return bool|int
 	 */
 	public function add($key, $value, $ttl = 2592000, $tags = NULL)
@@ -915,6 +925,7 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 	 * Select from memory elements, where element[$k] in relation $r with value $v
 	 * $k,$r and $v given in array $params
 	 * if $get_array - return array of matched elements, else - first element.
+	 * @deprecated
 	 * @param array $params
 	 * @param bool $get_array
 	 * @return mixed
