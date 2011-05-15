@@ -162,7 +162,8 @@ class MultiAccess implements IMutex
 		if ($sent==false)
 		{
 			$counter = $this->get_counter($type);
-			$this->err_log[] = 'Message was not sent to queue '.($type==self::readers ? 'readers '.$this->read_q_key : 'writers '.$this->write_q_key)
+			$this->err_log[] = 'Message was not sent to queue '.($type==self::readers ? 'readers '.$this->read_q_key
+					: 'writers '.$this->write_q_key)
 							   .' counter: '.$counter.', error: '.$err;
 			return false;
 		}
@@ -179,7 +180,8 @@ class MultiAccess implements IMutex
 			$counter = $this->get_counter($type);
 			if ($counter > 0)
 			{
-				$this->err_log[] = 'Message was not recieved from queue '.($type==self::readers ? 'readers '.$this->read_q_key : 'writers '.$this->write_q_key)
+				$this->err_log[] = 'Message was not recieved from queue '.($type==self::readers
+						? 'readers '.$this->read_q_key : 'writers '.$this->write_q_key)
 								   .' counter: '.$counter.', error: '.$err;
 				return false;
 			}
@@ -270,7 +272,7 @@ class MultiAccess implements IMutex
 
 		if (!empty($this->err_log))
 		{
-			MultiAccess_ErrorHandler::ReportError('MultiAccess errors '.implode("\n", $this->err_log));
+			trigger_error('MultiAccess errors '.implode("\n", $this->err_log), E_USER_NOTICE);
 		}
 	}
 
@@ -305,7 +307,7 @@ class autoUnlocker implements IRevokable
 	public function __construct($Unlock)
 	{
 		if (is_callable($Unlock)) $this->Unlock = $Unlock;
-		else MultiAccess_ErrorHandler::ReportError('Not callable parameter given');
+		else trigger_error('Not callable parameter given', E_USER_WARNING);
 	}
 
 	/** Revoke auto-unlocking (if mutex unlocked was "manually") */
@@ -318,27 +320,5 @@ class autoUnlocker implements IRevokable
 	public function __destruct()
 	{
 		if (isset($this->Unlock)) call_user_func($this->Unlock, $this);
-	}
-}
-
-class MultiAccess_ErrorHandler
-{
-	public static function ReportError($error)
-	{
-		if (!self::DisplayErrors()) trigger_error($error, E_USER_WARNING);
-	}
-
-	/**
-	 * If setting 'display_errors' is turned off, it's mean that error can be safely triggered (and handled by error handler, if necessary).
-	 * @static
-	 * @return bool
-	 */
-	public static function DisplayErrors()
-	{
-		static $display_errors;
-		if (!isset($display_errors)) $display_errors = ini_get('display_errors');
-
-		if (empty($display_errors)) return false;
-		else return true;
 	}
 }
