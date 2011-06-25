@@ -230,7 +230,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 		$c = count($map);
 		if ($c < 1) return 0;
 		$_end = $this->max_size;
-		usort($map, array(__CLASS__, 'sort_map'));
+		usort($map, array($this, 'sort_map'));
 		$imap = array_values($map);
 		$i = 0;
 		$eoa = $c-1; //end of array
