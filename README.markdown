@@ -36,7 +36,6 @@ Should be used only in specific cases (e.g. mutexes), or when other extensions c
 
 TODO:
 =====
-+ Remove select() method (currently deprecated)
 + Add Redis storage
 
 ***

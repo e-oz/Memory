@@ -80,19 +80,6 @@ interface IMemoryStorage
 	public function del_by_tags($tag);
 
 	/**
-	 * Select from storage by params
-	 * Only values of 'array' type will be selected
-	 * k - key, r - relation, v - value
-	 * relations: "<", ">", "=" or "==", "!=" or "<>"
-	 * example: select(array(array('k'=>'user_id',	'r'=>'<',	'v'=>1))); - select where user_id<1
-	 * @deprecated
-	 * @param array $params
-	 * @param bool $get_array
-	 * @return mixed
-	 */
-	public function select($params, $get_array = false);
-
-	/**
 	 * Select from storage via callback function
 	 * Only values of 'array' type will be selected
 	 * @param callback $fx ($value_array,$key)
@@ -462,70 +449,6 @@ class APCObject extends MemoryObject implements IMemoryStorage
 
 		if (!empty($todel)) return $this->del($todel);
 		return true;
-	}
-
-	/**
-	 * Select from storage by params
-	 * k - key, r - relation, v - value
-	 * example: select(array(array('k'=>'user_id',	'r'=>'<',	'v'=>1))); - select where user_id<1
-	 * @param array $params
-	 * @param bool $get_array
-	 * @return mixed
-	 */
-	public function select($params, $get_array = false)
-	{
-		$arr = array();
-		$l = strlen($this->prefix);
-		$i = new \APCIterator('user', '/^'.$this->prefix.'/', APC_ITER_KEY+APC_ITER_VALUE);
-		foreach ($i as $item)
-		{
-			if (!is_array($item[self::apc_arr_value])) continue;
-			$s = $item[self::apc_arr_value];
-			$key = substr($item[self::apc_arr_key], $l);
-			$matched = true;
-			foreach ($params as $p)
-			{
-				if ($p['r']=='=' || $p['r']=='==')
-				{
-					if ($s[$p['k']]!=$p['v'])
-					{
-						$matched = false;
-						break;
-					}
-				}
-				elseif ($p['r']=='<')
-				{
-					if ($s[$p['k']] >= $p['v'])
-					{
-						$matched = false;
-						break;
-					}
-				}
-				elseif ($p['r']=='>')
-				{
-					if ($s[$p['k']] <= $p['v'])
-					{
-						$matched = false;
-						break;
-					}
-				}
-				elseif ($p['r']=='<>' || $p['r']=='!=')
-				{
-					if ($s[$p['k']]==$p['v'])
-					{
-						$matched = false;
-						break;
-					}
-				}
-			}
-			if ($matched==true)
-			{
-				if (!$get_array) return $s;
-				else $arr[$key] = $s;
-			}
-		}
-		if (!$get_array || empty($arr)) return false;
-		else return $arr;
 	}
 
 	/**

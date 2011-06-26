@@ -103,21 +103,6 @@ class Memory
 	}
 
 	/**
-	 * Select from storage by params
-	 * Only values of 'array' type will be selected
-	 * k - key, r - relation, v - value
-	 * relations: "<", ">", "=" or "==", "!=" or "<>"
-	 * example: select(array(array('k'=>'user_id',	'r'=>'<',	'v'=>1))); - select where user_id<1
-	 * @param array $params
-	 * @param bool $get_array
-	 * @return mixed
-	 */
-	public static function select($params, $get_array = false)
-	{
-		return self::getMemoryObject()->select($params, $get_array);
-	}
-
-	/**
 	 * Select from storage via callback function
 	 * Only values of 'array' type will be selected
 	 * @param callback $fx ($value_array,$key)

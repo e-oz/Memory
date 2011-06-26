@@ -117,7 +117,6 @@ class MemoryObject_Test
 		$this->test_read();
 		$this->test_del();
 		$this->test_del_by_tags();
-		$this->test_select();
 		$this->test_select_fx();
 		$this->test_lock_key();
 		$this->test_unlock_key();
@@ -382,28 +381,6 @@ class MemoryObject_Test
 		$check = Memory::read(__METHOD__.'s4', $ttl_left);
 		if ($check!==array('z' => 1)) $result->Fail()->addDescription('value mismatch');
 		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left.' instead of 10');
-	}
-
-	public function test_select()
-	{
-		Memory::del(Memory::get_keys());
-		Memory::save('key1', array('kk1' => 5, 'kk2' => 7));
-		Memory::save('key2', array('kk1' => 4, 'kk2' => 6));
-		Memory::save('key3', array('kk1' => 5, 'kk2' => 5));
-		Memory::save('key4', array('kk1' => 2, 'kk2' => 4));
-
-		$this->results[] = $result = new TestResult(__METHOD__.__LINE__);
-		$call = Memory::select(array(array('k' => 'kk1', 'r' => '=', 'v' => 5)));
-		$result->Expected(array('kk1' => 5, 'kk2' => 7))->Result($call)->addDescription(Memory::getLastErr());
-
-		$this->results[] = $result = new TestResult(__METHOD__.__LINE__);
-		$call = Memory::select(array(array('k' => 'kk1', 'r' => '>', 'v' => 2),
-									array('k' => 'kk2', 'r' => '<', 'v' => 6)));
-		$result->Expected(array('kk1' => 5, 'kk2' => 5))->Result($call)->addDescription(Memory::getLastErr());
-
-		$this->results[] = $result = new TestResult(__METHOD__.__LINE__);
-		$call = Memory::select(array(array('k' => 'kk1', 'r' => '=', 'v' => 5)), true);
-		$result->Expected(array('key1' => array('kk1' => 5, 'kk2' => 7), 'key3' => array('kk1' => 5, 'kk2' => 5)))->Result($call)->addDescription(Memory::getLastErr());
 	}
 
 	public function test_select_fx()
