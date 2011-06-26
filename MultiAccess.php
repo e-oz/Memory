@@ -1,4 +1,5 @@
 <?php
+namespace Jamm\Memory;
 
 interface IMutex
 {

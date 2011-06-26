@@ -102,7 +102,7 @@ class MemoryObject_Test
 {
 	protected $results = array();
 
-	public function __construct(IMemoryStorage $mem)
+	public function __construct(\Jamm\Memory\IMemoryStorage $mem)
 	{
 		Memory::ini($mem);
 	}
@@ -495,7 +495,7 @@ class MemStorageTesting
 		}
 	}
 
-	public static function MakeTest(IMemoryStorage $testing_object)
+	public static function MakeTest(\Jamm\Memory\IMemoryStorage $testing_object)
 	{
 		$start_time = microtime(true);
 		$t = new MemoryObject_Test($testing_object);
@@ -503,6 +503,6 @@ class MemStorageTesting
 		self::PrintResults($t->RunTests());
 
 		print PHP_EOL.round(microtime(true)-$start_time, 6).PHP_EOL;
-		print_r(Memory::getMemoryObject()->getErrLog());
+		print_r($testing_object->getErrLog());
 	}
 }

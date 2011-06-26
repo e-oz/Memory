@@ -1,4 +1,5 @@
 <?php
+namespace Jamm\Memory;
 
 class MemcacheObject extends MemoryObject implements IMemoryStorage
 {
@@ -37,7 +38,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 
 	protected function setMemcacheObject($host = 'localhost', $port = 11211)
 	{
-		$this->memcache = new Memcache();
+		$this->memcache = new \Memcache();
 		if (!$this->memcache->connect($host, $port))
 		{
 			$this->ReportError('memcache not connected', __LINE__);
@@ -585,56 +586,3 @@ interface IMemcacheDecorator
 	public function getStats();
 }
 
-class MemcachedDecorator implements IMemcacheDecorator
-{
-	/** @var \Memcached */
-	protected $memcached;
-
-	public function __construct($host = 'localhost', $port = 11211)
-	{
-		$this->memcached = new Memcached();
-		$this->memcached->addServer($host, $port);
-		$this->memcached->setOption(Memcached::OPT_COMPRESSION, true);
-	}
-
-	public function add($key, $var, $flag = null, $ttl = 0)
-	{
-		return $this->memcached->add($key, $var, $ttl);
-	}
-
-	public function delete($key)
-	{
-		return $this->memcached->delete($key);
-	}
-
-	public function get($key)
-	{
-		return $this->memcached->get($key);
-	}
-
-	public function increment($key, $by_value)
-	{
-		return $this->memcached->increment($key, $by_value);
-	}
-
-	public function set($key, $value, $flag = null, $ttl = 0)
-	{
-		return $this->memcached->set($key, $value, $ttl);
-	}
-
-	public function connect($host = 'localhost', $port = 11211)
-	{ }
-
-	public function getStats()
-	{
-		return $this->memcached->getStats();
-	}
-}
-
-class MemcachedObject extends MemcacheObject
-{
-	protected function setMemcacheObject($host = 'localhost', $port = 11211)
-	{
-		$this->memcache = new MemcachedDecorator($host, $port);
-	}
-}
