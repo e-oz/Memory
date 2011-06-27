@@ -629,7 +629,7 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function lock_key($key, &$auto_unlocker_variable)
 	{
-		$r = $this->mem_object->add(self::lock_key_prefix.$key, 1);
+		$r = $this->mem_object->add(self::lock_key_prefix.$key, 1, self::key_lock_time);
 		if (!$r) return false;
 		$auto_unlocker_variable = new Key_AutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;

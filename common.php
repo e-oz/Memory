@@ -134,6 +134,7 @@ interface IMemoryStorage
 abstract class MemoryObject
 {
 	const max_ttl = 2592000;
+	const key_lock_time = 30;
 
 	protected $last_err;
 	protected $err_log;
@@ -539,7 +540,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function lock_key($key, &$auto_unlocker_variable)
 	{
-		$r = apc_add($this->lock_key_prefix.$key, 1, 30);
+		$r = apc_add($this->lock_key_prefix.$key, 1, self::key_lock_time);
 		if (!$r) return false;
 		$auto_unlocker_variable = new Key_AutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
