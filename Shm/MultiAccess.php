@@ -1,5 +1,5 @@
 <?php
-namespace Jamm\Memory;
+namespace Jamm\Memory\Shm;
 
 interface IMutex
 {

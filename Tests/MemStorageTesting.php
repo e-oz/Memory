@@ -1,4 +1,12 @@
 <?php
+namespace Jamm\Memory\Tests;
+
+/**
+ * Just call
+ * MemStorageTesting::MakeTest(new \Jamm\Memory\APCObject('test'));
+ * or
+ * MemStorageTesting::MakeTest(new \Jamm\Memory\RedisObject('test'));
+ */
 
 class TestResult
 {
