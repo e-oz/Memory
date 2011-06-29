@@ -57,7 +57,8 @@ If you can't install any third-party packages, you can use **Shared Memory** - b
 
 TODO:
 =====
-*all tasks completed, write your comments if you want to see new functionality :)*
++ Separate all classes for autoloaders
++ Atomize increment operation
 
 ***
 _Look at the comments in demo.php for additional info. Ask, what you want to see commented._
