@@ -6,7 +6,7 @@
 
 use Jamm\Memory\IMemoryStorage;
 use Jamm\Memory\APCObject;
-use Jamm\Memory\Key_AutoUnlocker;
+use Jamm\Memory\KeyAutoUnlocker;
 
 
 /**
@@ -157,7 +157,7 @@ class Memory
 	 * @param Key_AutoUnlocker|NULL $auto_unlocker
 	 * @return bool
 	 */
-	public static function unlock_key(Key_AutoUnlocker $auto_unlocker)
+	public static function unlock_key(KeyAutoUnlocker $auto_unlocker)
 	{
 		return self::getMemoryObject()->unlock_key($auto_unlocker);
 	}

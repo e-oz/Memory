@@ -287,7 +287,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	{
 		$r = $this->memcache->add($this->lock_key_prefix.$key, 1, null, self::key_lock_time);
 		if (!$r) return false;
-		$auto_unlocker_variable = new Key_AutoUnlocker(array($this, 'unlock_key'));
+		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
 		return true;
 	}
@@ -423,10 +423,10 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 
 	/**
 	 * Unlock key, locked by method 'lock_key'
-	 * @param Key_AutoUnlocker $auto_unlocker
+	 * @param KeyAutoUnlocker $auto_unlocker
 	 * @return bool
 	 */
-	public function unlock_key(Key_AutoUnlocker $auto_unlocker)
+	public function unlock_key(KeyAutoUnlocker $auto_unlocker)
 	{
 		if (empty($auto_unlocker->key))
 		{
@@ -502,21 +502,3 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		return $this->memcache->getStats();
 	}
 }
-
-interface IMemcacheDecorator
-{
-	public function add($key, $var, $flag = null, $ttl = 0);
-
-	public function get($key);
-
-	public function delete($key);
-
-	public function set($key, $value, $flag = null, $ttl = 0);
-
-	public function increment($key, $by_value);
-
-	public function connect($host = 'localhost', $port = 11211);
-
-	public function getStats();
-}
-

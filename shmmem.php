@@ -631,17 +631,17 @@ class SHMObject extends MemoryObject implements IMemoryStorage
 	{
 		$r = $this->mem_object->add(self::lock_key_prefix.$key, 1, self::key_lock_time);
 		if (!$r) return false;
-		$auto_unlocker_variable = new Key_AutoUnlocker(array($this, 'unlock_key'));
+		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
 		return true;
 	}
 
 	/**
 	 * Unlock key, locked by method 'lock_key'
-	 * @param Key_AutoUnlocker $auto_unlocker
+	 * @param KeyAutoUnlocker $auto_unlocker
 	 * @return bool
 	 */
-	public function unlock_key(Key_AutoUnlocker $auto_unlocker)
+	public function unlock_key(KeyAutoUnlocker $auto_unlocker)
 	{
 		if (empty($auto_unlocker->key))
 		{
@@ -1027,7 +1027,7 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 		$this->mem[self::map_key_locks][$key] = 1;
 		if ($this->refresh())
 		{
-			$auto_unlocker_variable = new Key_AutoUnlocker(array($this, 'unlock_key'));
+			$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
 			$auto_unlocker_variable->key = $key;
 			return true;
 		}
@@ -1036,10 +1036,10 @@ abstract class SingleMemory extends MemoryObject implements ISingleMemory
 
 	/**
 	 * Unlock key, locked by method 'lock_key'
-	 * @param Key_AutoUnlocker $key_auto_unlocker
+	 * @param KeyAutoUnlocker $key_auto_unlocker
 	 * @return bool
 	 */
-	public function unlock_key(Key_AutoUnlocker $key_auto_unlocker)
+	public function unlock_key(KeyAutoUnlocker $key_auto_unlocker)
 	{
 		if (empty($key_auto_unlocker->key))
 		{

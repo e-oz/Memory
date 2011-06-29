@@ -1,162 +1,6 @@
 <?php
 namespace Jamm\Memory;
 
-class Key_AutoUnlocker
-{
-	public $key = '';
-	protected $Unlock = NULL;
-
-	/**
-	 * @param callback $Unlock
-	 */
-	public function __construct($Unlock)
-	{
-		if (is_callable($Unlock)) $this->Unlock = $Unlock;
-	}
-
-	public function revoke()
-	{
-		$this->Unlock = NULL;
-	}
-
-	public function __destruct()
-	{
-		if (isset($this->Unlock)) call_user_func($this->Unlock, $this);
-	}
-}
-
-interface IMemoryStorage
-{
-	/**
-	 * Add value to memory storage, only if this key does not exists (or false will be returned).
-	 *
-	 * @param string $k
-	 * @param mixed $v
-	 * @param int $ttl
-	 * @param array|string $tags
-	 * @return boolean
-	 */
-	public function add($k, $v, $ttl = 259200, $tags = NULL);
-
-	/**
-	 * Save variable in memory storage
-	 *
-	 * @param string $k - key
-	 * @param mixed $v - value
-	 * @param int $ttl - time to live (store) in seconds
-	 * @param array|string $tags - array of tags for this key
-	 * @return bool
-	 */
-	public function save($k, $v, $ttl = 259200, $tags = NULL);
-
-	/**
-	 * Read data from memory storage
-	 *
-	 * @param string|array $k (string or array of string keys)
-	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
-	 * @return mixed
-	 */
-	public function read($k, &$ttl_left = -1);
-
-	/**
-	 * Delete key or array of keys from storage
-	 * @param string|array $k - keys
-	 * @return boolean|array - if array of keys was passed, on error will be returned array of not deleted keys, or 'true' on success.
-	 */
-	public function del($k);
-
-	/**
-	 * Delete old (by ttl) variables from storage
-	 * @return boolean
-	 */
-	public function del_old();
-
-	/**
-	 * Delete keys by tags
-	 *
-	 * @param array|string $tag - tag or array of tags
-	 * @return boolean
-	 */
-	public function del_by_tags($tag);
-
-	/**
-	 * Select from storage via callback function
-	 * Only values of 'array' type will be selected
-	 * @param callback $fx ($value_array,$key)
-	 * @param bool $get_array
-	 * @return mixed
-	 */
-	public function select_fx($fx, $get_array = false);
-
-	/**
-	 * Increment value of key
-	 * @param string $key
-	 * @param mixed $by_value
-	 * if stored value is array:
-	 *			 if $by_value is value in array, new element will be pushed to the end of array,
-	 *			if $by_value is key=>value array, key=>value pair will be added (or updated)
-	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
-	 * @return int|string|array new value of key
-	 */
-	public function increment($key, $by_value = 1, $limit_keys_count = 0);
-
-	/**
-	 * Get exclusive mutex for key. Key will be still accessible to read and write, but
-	 * another process can exclude dog-pile effect, if before updating the key he will try to get this mutex.
-	 * @param mixed $key
-	 * @param mixed $auto_unlocker_variable - pass empty, just declared variable
-	 */
-	public function lock_key($key, &$auto_unlocker_variable);
-
-	/**
-	 * Unlock key, locked by method 'lock_key'
-	 * @param Key_AutoUnlocker $auto_unlocker
-	 * @return bool
-	 */
-	public function unlock_key(Key_AutoUnlocker $auto_unlocker);
-
-	/** Return array of all stored keys */
-	public function get_keys();
-
-	/**
-	 * @return string
-	 */
-	public function getLastErr();
-
-	/**
-	 * @return array
-	 */
-	public function get_stat();
-
-	public function getErrLog();
-}
-
-abstract class MemoryObject
-{
-	const max_ttl = 2592000;
-	const key_lock_time = 30;
-
-	protected $last_err;
-	protected $err_log;
-
-	public function getLastErr()
-	{
-		$t = $this->last_err;
-		$this->last_err = '';
-		return $t;
-	}
-
-	protected function ReportError($msg, $line)
-	{
-		$this->last_err = $line.': '.$msg;
-		$this->err_log[] = $line.': '.$msg;
-		return false;
-	}
-
-	public function getErrLog()
-	{ return $this->err_log; }
-}
-
 class APCObject extends MemoryObject implements IMemoryStorage
 {
 	protected $prefix = 'K'; //because I love my wife Katya :)
@@ -542,17 +386,17 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		$r = apc_add($this->lock_key_prefix.$key, 1, self::key_lock_time);
 		if (!$r) return false;
-		$auto_unlocker_variable = new Key_AutoUnlocker(array($this, 'unlock_key'));
+		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
 		return true;
 	}
 
 	/**
 	 * Unlock key, locked by method 'lock_key'
-	 * @param Key_AutoUnlocker $auto_unlocker
+	 * @param KeyAutoUnlocker $auto_unlocker
 	 * @return bool
 	 */
-	public function unlock_key(Key_AutoUnlocker $auto_unlocker)
+	public function unlock_key(KeyAutoUnlocker $auto_unlocker)
 	{
 		if (empty($auto_unlocker->key))
 		{

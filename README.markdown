@@ -4,8 +4,8 @@ PHP Memory Cacher
 As a storage can be used:
 
  * [APC](http://pecl.php.net/package/APC)
- * [Memcache](http://pecl.php.net/package/memcache)
  * [Redis](http://redis.io)
+ * [Memcache](http://pecl.php.net/package/memcache)
  * [Shared memory](http://php.net/manual/en/book.shmop.php)
  
 All storage objects have one interface, so you can switch them without changing the working code.
@@ -17,7 +17,7 @@ All storage objects have one interface, so you can switch them without changing 
 + MultiAccess class can be used for any resource, to gain access *one write multiple read*
 
 ###Usage:
-For basic usage, download common.php and see demo.php to get documentation.
+See demo.php to get documentation.
 
 ###Requirements:
 ####PHP version: 5.3+
@@ -46,7 +46,7 @@ Should be used only in specific cases (e.g. mutexes), or when other extensions c
 + **PhpRedis** - speed 1.23
 + **Redis** - speed 1.6
 + **Shared memory** - speed 130
-+ **Memcache** - speed 192
++ **Memcache** - speed 192 (slowest)
 
 ###Storages comparison:
 **APC** is a very fast and easy to use storage, use it in most cases.  
@@ -57,8 +57,8 @@ If you can't install any third-party packages, you can use **Shared Memory** - b
 
 TODO:
 =====
-+ Separate all classes for autoloaders
 + Atomize increment operation
++ Implement all methods for Redis
 
 ***
 _Look at the comments in demo.php for additional info. Ask, what you want to see commented._
