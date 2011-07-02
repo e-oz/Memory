@@ -60,7 +60,6 @@ If you can't install any third-party packages, you can use **Shared Memory** - b
 TODO:
 =====
 + Atomize increment operation
-+ Implement all commands in RedisServer, to create full-featured PHP-client
 
 ***
 _Look at the comments in demo.php for additional info. Ask, what you want to see commented._
