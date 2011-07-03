@@ -191,6 +191,8 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
+		if (!$this->acquire_key($key, $auto_unlocker)) return $this->ReportError('Can not acquire key', __LINE__);
+		
 		$value = $this->read($key);
 		if ($value===null || $value===false) return $this->save($key, $by_value);
 

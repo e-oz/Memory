@@ -236,6 +236,8 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
+		if (!$this->acquire_key($key, $auto_unlocker)) return $this->ReportError('Can not acquire key', __LINE__);
+
 		$value = $this->memcache->get($this->prefix.$key);
 		if (empty($value))
 		{

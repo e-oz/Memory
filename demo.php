@@ -1,10 +1,9 @@
 <?php
 
-/** Ways to create the cache storage */
-
 $mem = new \Jamm\Memory\APCObject('my_cacher');
-// APC is approx. 14 time faster than Memcache, but Memcache can be used more universally, and is more flexible.
+// APC to 192 times faster than Memcache, but Memcache can be used between processes.
 // for example, Memcache can be used with mod_php and php-cli (from cron) or other applications.
+// Redis can be used also between processes, and works same fast as APC.
 
 /** Save variable: */
 $mem->save('key', 'value');
@@ -40,7 +39,7 @@ $mem->increment('users', array('admin' => 'user3')); //now 'users' = array('user
 
 /** Tags */
 $mem->save('user_login', 'Adam', 86400, array('users', 'logins'));
-$mem->save('guest_login', 'Adam', 86400, array('logins'));
+$mem->save('guest_login', 'Adam', 86400, 'logins');
 $mem->del_by_tags('logins');
 
 /** Dog-pile protection */

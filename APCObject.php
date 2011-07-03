@@ -341,6 +341,9 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
+
+		if (!$this->acquire_key($key, $auto_unlocker)) return $this->ReportError('Can not acquire key', __LINE__);
+
 		$value = apc_fetch($this->prefix.$key, $success);
 		if (!$success)
 		{

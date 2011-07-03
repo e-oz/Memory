@@ -85,6 +85,15 @@ interface IMemoryStorage
 	public function lock_key($key, &$auto_unlocker_variable);
 
 	/**
+	 * Try to lock key, and if key is already locked - wait, until key will be unlocked.
+	 * Time of waiting is defined in max_wait_unlock constant of MemoryObject class.
+	 * @param string $key
+	 * @param $auto_unlocker
+	 * @return boolean
+	 */
+	public function acquire_key($key, &$auto_unlocker);
+
+	/**
 	 * Unlock key, locked by method 'lock_key'
 	 * @param KeyAutoUnlocker $auto_unlocker
 	 * @return bool
