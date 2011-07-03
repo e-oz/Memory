@@ -132,12 +132,12 @@ class RedisServer extends MemoryObject implements IRedisServer
 		return $response;
 	}
 
-	public function get($key)
+	public function Get($key)
 	{
 		return $this->send_command('get', $key);
 	}
 
-	public function set($key, $value)
+	public function Set($key, $value)
 	{
 		return $this->send_command('set', $key, $value);
 	}
@@ -152,10 +152,9 @@ class RedisServer extends MemoryObject implements IRedisServer
 		return $this->send_command('keys', $pattern);
 	}
 
-	public function multi()
+	public function Multi()
 	{
-		$this->send_command('multi');
-		return $this;
+		return $this->send_command('multi');
 	}
 
 	public function sAdd($set, $value)
@@ -190,7 +189,7 @@ class RedisServer extends MemoryObject implements IRedisServer
 		return $this->send_command('flushdb');
 	}
 
-	public function info()
+	public function Info()
 	{
 		return $this->send_command('info');
 	}
@@ -215,7 +214,7 @@ class RedisServer extends MemoryObject implements IRedisServer
 	 * each argument is a key:
 	 * watch('key1', 'key2', 'key3', ...)
 	 */
-	public function watch()
+	public function Watch()
 	{
 		$args = func_get_args();
 		array_unshift($args, 'watch');
@@ -226,7 +225,7 @@ class RedisServer extends MemoryObject implements IRedisServer
 	 * Executes all previously queued commands in a transaction and restores the connection state to normal.
 	 * When using WATCH, EXEC will execute commands only if the watched keys were not modified, allowing for a check-and-set mechanism.
 	 */
-	public function exec()
+	public function Exec()
 	{
 		return $this->send_command('exec');
 	}
@@ -235,7 +234,7 @@ class RedisServer extends MemoryObject implements IRedisServer
 	 * Flushes all previously queued commands in a transaction and restores the connection state to normal.
 	 * If WATCH was used, DISCARD unwatches all keys.
 	 */
-	public function discard()
+	public function Discard()
 	{
 		return $this->send_command('discard');
 	}

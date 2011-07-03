@@ -733,7 +733,7 @@ class TestRedisServer implements ITest
 	public function test_Multi()
 	{
 		$this->results[] = $result = new TestResult(__METHOD__.__LINE__);
-		$result->Expected($this->redis)->Result($this->redis->multi());
+		$result->Expected('multi')->Result($this->redis->multi());
 	}
 
 	public function test_Watch()

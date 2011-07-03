@@ -179,8 +179,11 @@ interface IRedisServer
 	public function GetRange($key, $start, $end);
 
 	/**
-	 * Atomically sets key to value and returns the old value stored at key. Returns an error when key exists but does not hold a string value.
-	 * From time to time we need to get the value of the counter and reset it to zero atomically. This can be done using GETSET mycounter "0".
+	 * Atomically sets key to value and returns the old value stored at key.
+	 * Returns an error when key exists but does not hold a string value.
+	 * Usage:
+	 * From time to time we need to get the value of the counter and reset it to zero atomically.
+	 * This can be done using GETSET mycounter "0".
 	 * @param string $key
 	 * @param string $value
 	 * @return string
@@ -986,5 +989,5 @@ interface IRedisServer
 	public function sRem($set, $value);
 
 	/** Get information and statistics about the server */
-	public function info();
+	public function Info();
 }
