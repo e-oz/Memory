@@ -59,7 +59,7 @@ If you can't install any third-party packages, you can use **Shared Memory** - b
 
 TODO:
 =====
-+ Atomize increment operation
++ Create Wiki pages (don't know yet what to write :))
 
 ***
 _Look at the comments in demo.php for additional info. Ask, what you want to see commented._
