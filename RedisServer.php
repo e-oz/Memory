@@ -17,9 +17,11 @@ namespace Jamm\Memory;
  * @method string SRANDMEMBER(string $key) Get a random member from a set
  * @method string SYNC() Internal command used for replication
  */
-class RedisServer extends MemoryObject implements IRedisServer
+class RedisServer implements IRedisServer
 {
 	protected $connection;
+	protected $last_err;
+	protected $err_log;
 
 	public function __construct($host = 'localhost', $port = '6379')
 	{
@@ -32,6 +34,23 @@ class RedisServer extends MemoryObject implements IRedisServer
 		if (!$socket) return $this->ReportError('Connection error: '.$errno.':'.$errstr, __LINE__);
 		return $socket;
 	}
+
+	public function getLastErr()
+	{
+		$t = $this->last_err;
+		$this->last_err = '';
+		return $t;
+	}
+
+	protected function ReportError($msg, $line)
+	{
+		$this->last_err = $line.': '.$msg;
+		$this->err_log[] = $line.': '.$msg;
+		return false;
+	}
+
+	public function getErrLog()
+	{ return $this->err_log; }
 
 	/**
 	 * Execute send_command and return the result
