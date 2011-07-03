@@ -3,110 +3,12 @@ namespace Jamm\Memory\Tests;
 
 /**
  * Just call
- * MemStorageTesting::MakeTest(new \Jamm\Memory\APCObject('test'));
+ * Tester::MakeTest(new TestMemoryObject(new \Jamm\Memory\APCObject('test')));
  * or
- * MemStorageTesting::MakeTest(new \Jamm\Memory\RedisObject('test'));
+ * Tester::MakeTest(new TestMemoryObject(new \Jamm\Memory\RedisObject('test')));
  */
 
-class TestResult
-{
-	protected $name;
-	protected $type;
-	protected $expected;
-	protected $result;
-	protected $expected_setted = false;
-	protected $types_compare = false;
-	protected $description;
-
-	const type_success = 'success';
-	const type_fail = 'fail';
-
-	public function __construct($name)
-	{
-		$this->name = $name;
-		$this->Success();
-		return $this;
-	}
-
-	public function Expected($expected)
-	{
-		$this->expected = $expected;
-		$this->expected_setted = true;
-		return $this;
-	}
-
-	public function Result($result)
-	{
-		$this->result = $result;
-		if ($this->expected_setted)
-		{
-			if ($this->types_compare)
-			{
-				if ($result===$this->expected) $this->Success();
-				else $this->Fail();
-			}
-			else
-			{
-				if ($result==$this->expected) $this->Success();
-				else $this->Fail();
-			}
-		}
-		return $this;
-	}
-
-	public function getExpected()
-	{ return $this->expected; }
-
-	public function setName($name)
-	{
-		$this->name = $name;
-		return $this;
-	}
-
-	public function getName()
-	{ return $this->name; }
-
-	public function getResult()
-	{ return $this->result; }
-
-	public function Success()
-	{
-		$this->type = self::type_success;
-		return $this;
-	}
-
-	public function Fail()
-	{
-		$this->type = self::type_fail;
-		return $this;
-	}
-
-	public function getType()
-	{ return $this->type; }
-
-	public function setTypesCompare($types_compare = true)
-	{
-		if (is_bool($types_compare)) $this->types_compare = $types_compare;
-		return $this;
-	}
-
-	public function getTypesCompare()
-	{ return $this->types_compare; }
-
-	public function addDescription($description)
-	{
-		if (empty($description)) return false;
-		if (!empty($this->description)) $this->description .= PHP_EOL.$description;
-		else $this->description = $description;
-		return $this;
-	}
-
-	public function getDescription()
-	{ return $this->description; }
-
-}
-
-class MemoryObject_Test
+class TestMemoryObject implements ITest
 {
 	protected $results = array();
 	protected $mem;
@@ -135,6 +37,11 @@ class MemoryObject_Test
 		$this->test_get_stat();
 
 		return $this->results;
+	}
+
+	public function getErrLog()
+	{
+		return $this->mem->getErrLog();
 	}
 
 	public function test_add()
@@ -476,35 +383,5 @@ class MemoryObject_Test
 
 		$call = $this->mem->get_stat();
 		$result->setTypesCompare()->Expected(true)->Result(!empty($call))->addDescription($this->mem->getLastErr());
-	}
-}
-
-class MemStorageTesting
-{
-	public static function PrintResults($results, $newline = PHP_EOL)
-	{
-		/** @var TestResult $result */
-		foreach ($results as $result)
-		{
-			print $newline.$result->getName();
-			print $newline.$result->getType();
-			if ($result->getDescription()!='') print $newline.$result->getDescription();
-			print $newline.'Expected: ';
-			var_dump($result->getExpected());
-			print 'Result: ';
-			var_dump($result->getResult());
-			print $newline.$newline.$newline;
-		}
-	}
-
-	public static function MakeTest(\Jamm\Memory\IMemoryStorage $testing_object)
-	{
-		$start_time = microtime(true);
-		$t = new MemoryObject_Test($testing_object);
-
-		self::PrintResults($t->RunTests());
-
-		print PHP_EOL.round(microtime(true)-$start_time, 6).PHP_EOL;
-		print_r($testing_object->getErrLog());
 	}
 }

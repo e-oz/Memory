@@ -22,6 +22,9 @@ interface IRedisServer
 	const Position_BEFORE = 'BEFORE';
 	const Position_AFTER = 'AFTER';
 	const WITHSCORES = 'WITHSCORES';
+	const Aggregate_SUM = 'SUM';
+	const Aggregate_MIN = 'MIN';
+	const Aggregate_MAX = 'MAX';
 
 	/**
 	 * Append a value to a key
@@ -307,12 +310,12 @@ interface IRedisServer
 	/**
 	 * Insert an element before or after another element in a list
 	 * @param string $key
-	 * @param string $position see Position* constants
+	 * @param bool $after
 	 * @param string $pivot
 	 * @param string $value
 	 * @return int
 	 */
-	public function LInsert($key, $position, $pivot, $value);
+	public function LInsert($key, $after = true, $pivot, $value);
 
 	/**
 	 * Get the length of a list
@@ -442,7 +445,6 @@ interface IRedisServer
 	/**
 	 * Subscribes the client to the given patterns.
 	 * @param string $pattern
-	 * @return void
 	 */
 	public function PSubscribe($pattern);
 
@@ -557,7 +559,6 @@ interface IRedisServer
 	/**
 	 * Select the DB with having the specified zero-based numeric index. New connections always use DB 0.
 	 * @param int $index
-	 * @return void
 	 */
 	public function Select($index);
 
@@ -706,7 +707,7 @@ interface IRedisServer
 	 * Add multiple sets and store the resulting set in a key
 	 * Parameters: $destination, $key [key ...]
 	 * @param $destination
-	 * @param string $key
+	 * @param string|array $key
 	 * Returns the number of elements in the resulting set.
 	 * @return int
 	 */
@@ -739,9 +740,9 @@ interface IRedisServer
 	/**
 	 * Unsubscribes the client from the given channels, or from all of them if none is given.
 	 * Parameters: [channel [channel ...]]
-	 * @return void
+	 * @param string $channel
 	 */
-	public function Unsubscribe();
+	public function Unsubscribe($channel = '');
 
 	/** Forget about all watched keys */
 	public function Unwatch();
@@ -787,11 +788,11 @@ interface IRedisServer
 	 * @param string $destination
 	 * @param array $keys
 	 * @param array|null $weights
-	 * @param array|null $aggregate (SUM|MIN|MAX)
+	 * @param string|null $aggregate see Aggregate* constants
 	 * Returns the number of elements in the resulting sorted set at destination.
 	 * @return int
 	 */
-	public function zInterStore($destination, array $keys, array $weights = null, array $aggregate = null);
+	public function zInterStore($destination, array $keys, array $weights = null, $aggregate = null);
 
 	/**
 	 * @abstract
@@ -906,10 +907,10 @@ interface IRedisServer
 	 * @param string $destination
 	 * @param array $keys
 	 * @param array|null $weights
-	 * @param array|null $aggregate (SUM|MIN|MAX)
+	 * @param string|null $aggregate see Aggregate* constants
 	 * @return int
 	 */
-	public function zUnionStore($destination, array $keys, array $weights = null, array $aggregate = null);
+	public function zUnionStore($destination, array $keys, array $weights = null, $aggregate = null);
 
 	/**
 	 * Increment the integer value of a key by the given number

@@ -381,7 +381,7 @@ class RedisServer extends MemoryObject implements IRedisServer
 	 */
 	public function Config_Get($pattern)
 	{
-		return $this->send_command('Config_Get', $pattern);
+		return $this->send_command('CONFIG GET', $pattern);
 	}
 
 	/**
@@ -392,7 +392,7 @@ class RedisServer extends MemoryObject implements IRedisServer
 	 */
 	public function Config_Set($parameter, $value)
 	{
-		return $this->send_command('Config_Set', $parameter, $value);
+		return $this->send_command('CONFIG SET', $parameter, $value);
 	}
 
 	/**
@@ -406,7 +406,7 @@ class RedisServer extends MemoryObject implements IRedisServer
 	 */
 	public function Config_ResetStat()
 	{
-		return $this->send_command('Config_ResetStat');
+		return $this->send_command('CONFIG RESETSTAT');
 	}
 
 	/**
@@ -652,13 +652,15 @@ class RedisServer extends MemoryObject implements IRedisServer
 	/**
 	 * Insert an element before or after another element in a list
 	 * @param string $key
-	 * @param string $position see Position* constants
+	 * @param bool $after
 	 * @param string $pivot
 	 * @param string $value
 	 * @return int
 	 */
-	public function LInsert($key, $position, $pivot, $value)
+	public function LInsert($key, $after = true, $pivot, $value)
 	{
+		if ($after) $position = self::Position_AFTER;
+		else $position = self::Position_BEFORE;
 		return $this->send_command('LInsert', $key, $position, $pivot, $value);
 	}
 
@@ -801,7 +803,13 @@ class RedisServer extends MemoryObject implements IRedisServer
 	 */
 	public function MSet(array $keys)
 	{
-		return $this->__call('MSet', $keys);
+		$q = array();
+		foreach ($keys as $k => $v)
+		{
+			$q[] = $k;
+			$q[] = $v;
+		}
+		return $this->__call('MSet', $q);
 	}
 
 	/**
@@ -814,7 +822,13 @@ class RedisServer extends MemoryObject implements IRedisServer
 	 */
 	public function MSetNX(array $keys)
 	{
-		return $this->__call('MSetNX', $keys);
+		$q = array();
+		foreach ($keys as $k => $v)
+		{
+			$q[] = $k;
+			$q[] = $v;
+		}
+		return $this->__call('MSetNX', $q);
 	}
 
 	/**
@@ -830,11 +844,10 @@ class RedisServer extends MemoryObject implements IRedisServer
 	/**
 	 * Subscribes the client to the given patterns.
 	 * @param string $pattern
-	 * @return void
 	 */
 	public function PSubscribe($pattern)
 	{
-		$this->send_command('PSubscribe', $pattern);
+		return $this->send_command('PSubscribe', $pattern);
 	}
 
 	/**
@@ -994,11 +1007,10 @@ class RedisServer extends MemoryObject implements IRedisServer
 	/**
 	 * Select the DB with having the specified zero-based numeric index. New connections always use DB 0.
 	 * @param int $index
-	 * @return void
 	 */
 	public function Select($index)
 	{
-		$this->send_command('Select', $index);
+		return $this->send_command('Select', $index);
 	}
 
 	/**
@@ -1156,7 +1168,7 @@ class RedisServer extends MemoryObject implements IRedisServer
 	 * Add multiple sets and store the resulting set in a key
 	 * Parameters: $destination, $key [key ...]
 	 * @param $destination
-	 * @param string $key
+	 * @param string|array $key
 	 * Returns the number of elements in the resulting set.
 	 * @return int
 	 */
@@ -1182,13 +1194,17 @@ class RedisServer extends MemoryObject implements IRedisServer
 	/**
 	 * Unsubscribes the client from the given channels, or from all of them if none is given.
 	 * Parameters: [channel [channel ...]]
-	 * @return void
+	 * @param string $channel
 	 */
-	public function Unsubscribe()
+	public function Unsubscribe($channel = '')
 	{
 		$args = func_get_args();
-		if (empty($args)) $this->send_command('Unsubscribe');
-		else $this->__call('Unsubscribe', $args);
+		if (empty($args)) return $this->send_command('Unsubscribe');
+		else
+		{
+			if (is_array($channel)) return $this->__call('Unsubscribe', $channel);
+			else return $this->__call('Unsubscribe', $args);
+		}
 	}
 
 	/** Forget about all watched keys */
@@ -1250,12 +1266,13 @@ class RedisServer extends MemoryObject implements IRedisServer
 	 * @param string $destination
 	 * @param array $keys
 	 * @param array|null $weights
-	 * @param array|null $aggregate (SUM|MIN|MAX)
+	 * @param string|null $aggregate see Aggregate* constants
 	 * Returns the number of elements in the resulting sorted set at destination.
 	 * @return int
 	 */
-	public function zInterStore($destination, array $keys, array $weights = null, array $aggregate = null)
+	public function zInterStore($destination, array $keys, array $weights = null, $aggregate = null)
 	{
+		$destination = array($destination, count($keys));
 		$destination = array_merge($destination, $keys);
 		if (!empty($weights))
 		{
@@ -1265,7 +1282,7 @@ class RedisServer extends MemoryObject implements IRedisServer
 		if (!empty($aggregate))
 		{
 			$destination[] = 'AGGREGATE';
-			$destination = array_merge($destination, $aggregate);
+			$destination[] = $aggregate;
 		}
 		return $this->__call('zInterStore', $destination);
 	}
@@ -1295,7 +1312,7 @@ class RedisServer extends MemoryObject implements IRedisServer
 	 */
 	public function zRangeByScore($key, $min, $max, $withscores = false, array $limit = null)
 	{
-		$args = array($key, $max, $min);
+		$args = array($key, $min, $max);
 		if ($withscores) $args[] = self::WITHSCORES;
 		if (!empty($limit))
 		{
@@ -1430,11 +1447,12 @@ class RedisServer extends MemoryObject implements IRedisServer
 	 * @param string $destination
 	 * @param array $keys
 	 * @param array|null $weights
-	 * @param array|null $aggregate (SUM|MIN|MAX)
+	 * @param string|null $aggregate see Aggregate* constants
 	 * @return int
 	 */
-	public function zUnionStore($destination, array $keys, array $weights = null, array $aggregate = null)
+	public function zUnionStore($destination, array $keys, array $weights = null, $aggregate = null)
 	{
+		$destination = array($destination, count($keys));
 		$destination = array_merge($destination, $keys);
 		if (!empty($weights))
 		{
@@ -1444,7 +1462,7 @@ class RedisServer extends MemoryObject implements IRedisServer
 		if (!empty($aggregate))
 		{
 			$destination[] = 'AGGREGATE';
-			$destination = array_merge($destination, $aggregate);
+			$destination[] = $aggregate;
 		}
 		return $this->__call('zUnionStore', $destination);
 	}
