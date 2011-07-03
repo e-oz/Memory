@@ -240,23 +240,28 @@ class TestMemoryObject implements ITest
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'s1');
 		if ($check!=100) $result->Fail()->addDescription('value mismatch, should be 100, result: '.$check);
+		$result->addDescription($this->mem->getLastErr());
 
 		//Save 100 with ttl 10
 		$this->results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$call = $this->mem->save(__METHOD__.'s2', 100, 10);
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'s2', $ttl_left);
+		$result->addDescription('value: '.$check);
 		if ($check!=100) $result->Fail()->addDescription('value mismatch: '.$check);
 		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left);
+		$result->addDescription($this->mem->getLastErr());
 
 		//Save float key
 		$this->results[] = $result = new TestResult(__METHOD__.__LINE__);
 		$key = microtime(true)*100;
-		$call = $this->mem->save($key, 100, 10);
+		$call = $this->mem->save($key, 100, 12);
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read($key, $ttl_left);
+		$result->addDescription('ttl_left: '.$ttl_left);
 		if ($check!=100) $result->Fail()->addDescription('value mismatch: '.$check);
-		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left);
+		if ($ttl_left!=12) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left);
+		$result->addDescription($this->mem->getLastErr());
 
 		//Save negative float
 		$this->results[] = $result = new TestResult(__METHOD__.__LINE__);
@@ -266,6 +271,7 @@ class TestMemoryObject implements ITest
 		$check = $this->mem->read($key, $ttl_left);
 		if ($check!=100) $result->Fail()->addDescription('value mismatch: '.$check);
 		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left);
+		$result->addDescription($this->mem->getLastErr());
 
 		//Save with float ttl
 		$this->results[] = $result = new TestResult(__METHOD__.__LINE__);
@@ -274,6 +280,7 @@ class TestMemoryObject implements ITest
 		$check = $this->mem->read(__METHOD__.'s21', $ttl_left);
 		if ($check!=100) $result->Fail()->addDescription('value mismatch: '.$check);
 		if ($ttl_left < 10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left);
+		$result->addDescription($this->mem->getLastErr());
 
 		//Save with string ttl
 		$this->results[] = $result = new TestResult(__METHOD__.__LINE__);
@@ -281,6 +288,7 @@ class TestMemoryObject implements ITest
 		$result->Expected(true)->Result($call)->addDescription($this->mem->getLastErr());
 		$check = $this->mem->read(__METHOD__.'s22', $ttl_left);
 		if ($check!=100) $result->Fail()->addDescription('value mismatch: '.$check);
+		$result->addDescription($this->mem->getLastErr());
 
 		//Save with tag
 		$this->results[] = $result = new TestResult(__METHOD__.__LINE__);
@@ -289,6 +297,7 @@ class TestMemoryObject implements ITest
 		$check = $this->mem->read(__METHOD__.'s3', $ttl_left);
 		if ($check!=100) $result->Fail()->addDescription('value mismatch');
 		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left.' instead of 10');
+		$result->addDescription($this->mem->getLastErr());
 
 		//Save with array of tags
 		$this->results[] = $result = new TestResult(__METHOD__.__LINE__);
@@ -297,6 +306,7 @@ class TestMemoryObject implements ITest
 		$check = $this->mem->read(__METHOD__.'s4', $ttl_left);
 		if ($check!==array('z' => 1)) $result->Fail()->addDescription('value mismatch');
 		if ($ttl_left!=10) $result->Fail()->addDescription('ttl mismatch: '.$ttl_left.' instead of 10');
+		$result->addDescription($this->mem->getLastErr());
 	}
 
 	public function test_select_fx()

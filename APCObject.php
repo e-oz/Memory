@@ -121,13 +121,11 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function getKeyTTL($key)
 	{
-		$i = new \APCIterator('user', '/^'.$this->prefix.$key.'$/', APC_ITER_TTL+APC_ITER_CTIME, 1);
-		foreach ($i as $key)
-		{
-			if ($key[self::apc_arr_ttl]!=0) return (($key[self::apc_arr_ctime]+$key[self::apc_arr_ttl])-time());
-			else return self::max_ttl;
-		}
-		return self::max_ttl;
+		$i = new \APCIterator('user', '/^'.preg_quote($this->prefix.$key).'$/', APC_ITER_TTL+APC_ITER_CTIME, 1);
+		$item = $i->current();
+		if (empty($item)) $this->ReportError('key '.$key.' not found'.count($i), __LINE__);
+		if ($item[self::apc_arr_ttl]!=0) return (($item[self::apc_arr_ctime]+$item[self::apc_arr_ttl])-time());
+		else return self::max_ttl;
 	}
 
 	/**
@@ -183,7 +181,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		$map = array();
 		$l = strlen($this->prefix);
-		$i = new \APCIterator('user', '/^'.$this->prefix.'/', APC_ITER_KEY);
+		$i = new \APCIterator('user', '/^'.preg_quote($this->prefix).'/', APC_ITER_KEY);
 		foreach ($i as $item)
 		{
 			$map[] = substr($item[self::apc_arr_key], $l);
@@ -242,7 +240,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		}
 		if (empty($check_period) || $check_period > 1800) $check_period = 1800;
 
-		$ittl = new \APCIterator('user', '/^'.$this->defragmentation_prefix.'$/', APC_ITER_ATIME, 1);
+		$ittl = new \APCIterator('user', '/^'.preg_quote($this->defragmentation_prefix).'$/', APC_ITER_ATIME, 1);
 		$cttl = $ittl->current();
 		$previous_cleaning = $cttl[self::apc_arr_atime];
 		if (empty($previous_cleaning) || ($t-$previous_cleaning) > $check_period)
@@ -282,7 +280,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 
 		$todel = array();
 		$l = strlen($this->tags_prefix);
-		$i = new \APCIterator('user', '/^'.$this->tags_prefix.'/', APC_ITER_KEY+APC_ITER_VALUE);
+		$i = new \APCIterator('user', '/^'.preg_quote($this->tags_prefix).'/', APC_ITER_KEY+APC_ITER_VALUE);
 		foreach ($i as $key_tags)
 		{
 			if (is_array($key_tags[self::apc_arr_value]))
@@ -307,7 +305,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		$arr = array();
 		$l = strlen($this->prefix);
-		$i = new \APCIterator('user', '/^'.$this->prefix.'/', APC_ITER_KEY+APC_ITER_VALUE);
+		$i = new \APCIterator('user', '/^'.preg_quote($this->prefix).'/', APC_ITER_KEY+APC_ITER_VALUE);
 		foreach ($i as $item)
 		{
 			if (!is_array($item[self::apc_arr_value])) continue;
