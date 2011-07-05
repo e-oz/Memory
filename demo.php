@@ -43,21 +43,25 @@ $mem->save('guest_login', 'Adam', 86400, 'logins');
 $mem->del_by_tags('logins');
 
 /** Dog-pile protection */
-$ttl = 0;
-$value = $mem->read('mykey', $ttl);
-if (!empty($value) && $ttl < 10) //if value soon will be deleted...
+$value = $mem->read('mykey', $ttl_left);
+if (!empty($value) && $ttl_left < 10) //if key will expire in less than 10 seconds...
 {
-	//..then let's try to update it. But to exclude dog-pile, we should make it exclusively...
-	if ($mem->lock_key('mykey', $auto_unlocker)) //...so, if I've got exclusive right to refresh this key...
+	//then let's try to update it. But to exclude dog-pile, we should make it exclusively
+	//so, if I've got exclusive right to refresh this key...
+	//then I will refresh this key, and nobody else with me simultaneously :)
+	if ($mem->lock_key('mykey', $auto_unlocker))
 	{
-		//...then I will refresh this key, and nobody else with me simultaneously :)
 		$value = null;
 	}
 }
+
 if (empty($value))
 {
 	$value = 'New generated value';
 	$mem->save('mykey', $value, 43200);
-	//this string can be commented out - key will be safely unlocked automatically anyway
-	if (isset($auto_unlocker)) $mem->unlock_key($auto_unlocker);
+	//...
+	//key will be safely unlocked automatically anyway, don't worry :)
+	//...
+	//but you can unlock key in any moment, if you need it:
+	if (!empty($auto_unlocker)) $mem->unlock_key($auto_unlocker);
 }

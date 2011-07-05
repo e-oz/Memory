@@ -12,12 +12,63 @@ All storage objects have one interface, so you can switch them without changing 
 
 ##Features:
 + Tags for keys
-+ Dog-pile and race-condition effects are excluded
-+ Increment can work with arrays, strings and numeric values
-+ MultiAccess class can be used for any resource, to gain access *one write multiple read*
++ "Dog-pile" ("cache miss storm") and "race condition" effects are excluded
++ Lock, unlock or acquire key just by one command
++ Auto Unlocker - any locked key will be automatically unlocked (on exit from function or script)
++ You can select keys via callback-function
++ One interface for all storages - you can change storage without changing your code
++ Increment() method can work with arrays, strings and numeric values
++ MultiAccess class can be used for any resource, to create an access model *one write multiple read*
 
 ##Usage:
-See demo.php to get documentation.
+See [demo.php](https://github.com/jamm/Memory/blob/master/demo.php) to get examples of code.  
+
+You can use MemoryObjects (RedisObject, APCObject, MemcacheObject, SHMObject) as usual key-value storage: get/set/delete.    
+What for this library was designed is to provide additional features, such as Tags or "dog-pile" effect avoidance.  
+
+In all storages race conditions are excluded, but you can also lock keys to avoid race conditions in your algorithm:  
+for example, see this code:
+```php  
+$value = $mem->read('key');    
+if (some_condition()) $mem->save('key', $value . 'append');
+```  
+If this code will be executed by 2 scripts simultaneously, 'append' of one script will be lost.  
+To avoid it, you can lock key:    
+```php  
+if ($mem->lock_key('key', $au))  
+{
+    if (some_condition()) $mem->save('key', $value . 'append');
+}
+```  
+or acquire:  
+```php  
+if ($mem->acquire_key('key', $au))  
+{
+    if (some_condition()) $mem->save('key', $value . 'append');
+}
+```  
+Difference between these methods is what they will do when key is locked by another process: lock_key() will just return 'false', 
+acquire_key() will wait until key will not be unlocked (maximum time of waiting declared in code).  
+
+All 'locks' here are *soft*. It means keys aren't locked for write or read, but you can check, if key is 'locked' or not, and what to do with this - is decision of your script.    
+It was designed to avoid dead-locks and unnecessary queues of clients which waits for access the key.
+
+Example in code:
+```php
+if ($mem->lock_key('key', $au))  
+{
+    if (some_condition()) $mem->save('key', $value . 'append');
+}
+else
+{
+    // key is not hard-locked actually
+    $mem->del('key'); // we can do this
+    // but we can use 'locks' to manage multi-process interactions properly and easy (see previous code examples)
+}
+```
+
+To avoid "Dog-pile" effect ("cache miss storm", "cache stampede"), we can use second argument of method read() - when time of expiration is near, we can try to lock key, and if key was locked - update value.   
+See example in [demo.php](https://github.com/jamm/Memory/blob/master/demo.php).    
 
 ##Requirements:
 You can use each storage separately, requirements are individually for storages
