@@ -2,6 +2,18 @@
 namespace Jamm\Memory;
 
 /**
+ * RedisServer allows you to work with Redis storage in PHP
+ * 
+ * Almost all methods of this class have same names as commands of Redis,
+ * each method is documented by PhpDoc-commentary.
+ * 
+ * This class doesn't require IRedisServer interface, you can just comment out "//implements IRedisServer"
+ * Interface exists just for smart code completion in IDE.
+ * 
+ * You can send custom command using send_command() method, 
+ * and read errors by getLastErr() and getErrLog() methods.
+ * 
+ * All debug-commands declared as magic methods and implemented via __call() method:
  * @method mixed DEBUG_OBJECT($key) Get debugging information about a key
  * @method mixed DEBUG_SEGFAULT() Make the server crash
  * @method string ECHO($message) Echo the given string
@@ -28,7 +40,7 @@ class RedisServer implements IRedisServer
 		$this->connection = $this->connect($host, $port);
 	}
 
-	protected function connect($host, $port)
+	public function connect($host, $port)
 	{
 		$socket = fsockopen($host, $port, $errno, $errstr);
 		if (!$socket) return $this->ReportError('Connection error: '.$errno.':'.$errstr, __LINE__);
@@ -42,7 +54,7 @@ class RedisServer implements IRedisServer
 		return $t;
 	}
 
-	protected function ReportError($msg, $line)
+	public function ReportError($msg, $line)
 	{
 		$this->last_err = $line.': '.$msg;
 		$this->err_log[] = $line.': '.$msg;
@@ -151,49 +163,100 @@ class RedisServer implements IRedisServer
 		return $response;
 	}
 
+	/**
+	 * Get the value of a key
+	 * @param string $key
+	 * @return string
+	 */
 	public function Get($key)
 	{
 		return $this->send_command('get', $key);
 	}
 
+	/**
+	 * Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
+	 * @param string $key
+	 * @param string $value
+	 * @return string
+	 */
 	public function Set($key, $value)
 	{
 		return $this->send_command('set', $key, $value);
 	}
 
+	/**
+	 * Set the value and expiration of a key
+	 * @param string $key
+	 * @param int $seconds
+	 * @param string $value
+	 * @return boolean
+	 */
 	public function SetEx($key, $seconds, $value)
 	{
 		return $this->send_command('setex', $key, $seconds, $value);
 	}
 
+	/**
+	 * Returns all keys matching pattern.
+	 * @param string $pattern
+	 *  Supported glob-style patterns:
+	 *   h?llo matches hello, hallo and hxllo
+	 *   h*llo matches hllo and heeeello
+	 *   h[ae]llo matches hello and hallo, but not hillo
+	 *  Use \ to escape special characters if you want to match them verbatim.
+	 * @return array
+	 */
 	public function Keys($pattern)
 	{
 		return $this->send_command('keys', $pattern);
 	}
 
+	/** Mark the start of a transaction block */
 	public function Multi()
 	{
 		return $this->send_command('multi');
 	}
 
+	/** Add a member to a set
+	 * @param string $set
+	 * @param string $value
+	 * @return boolean
+	 */
 	public function sAdd($set, $value)
 	{
 		return $this->send_command('sadd', $set, $value);
 	}
 
+	/**
+	 * Returns all the members of the set.
+	 * @param string $set
+	 * @return array
+	 */
 	public function sMembers($set)
 	{
 		return $this->send_command('smembers', $set);
 	}
 
-	public function hSet($hash, $field, $value)
+	/**
+	 * Set the string value of a hash field
+	 * @param string $key hash
+	 * @param string $field
+	 * @param string $value
+	 * @return int
+	 */
+	public function hSet($key, $field, $value)
 	{
-		return $this->send_command('hset', $hash, $field, $value);
+		return $this->send_command('hset', $key, $field, $value);
 	}
 
-	public function hGetAll($hash)
+	/**
+	 * Get all the fields and values in a hash
+	 * @param string $key
+	 * @return array
+	 */
+	public function hGetAll($key)
 	{
-		$arr = $this->send_command('hgetall', $hash);
+		$arr = $this->send_command('hgetall', $key);
 		$c = count($arr);
 		$r = array();
 		for ($i = 0; $i < $c; $i += 2)
@@ -203,16 +266,19 @@ class RedisServer implements IRedisServer
 		return $r;
 	}
 
+	/** Remove all keys from the current database */
 	public function FlushDB()
 	{
 		return $this->send_command('flushdb');
 	}
 
+	/** Get information and statistics about the server */
 	public function Info()
 	{
 		return $this->send_command('info');
 	}
 
+	/** Close connection */
 	public function __destruct()
 	{
 		if (!empty($this->connection)) fclose($this->connection);
@@ -281,11 +347,22 @@ class RedisServer implements IRedisServer
 		return $this->send_command('srem', $set, $value);
 	}
 
+	/**
+	 * Set a key's time to live in seconds
+	 * @param string $key
+	 * @param int $seconds
+	 * @return boolean
+	 */
 	public function Expire($key, $seconds)
 	{
 		return $this->send_command('expire', $key, $seconds);
 	}
 
+	/**
+	 * Get the time to live for a key
+	 * @param string $key
+	 * @return int
+	 */
 	public function TTL($key)
 	{
 		return $this->send_command('ttl', $key);
@@ -507,8 +584,11 @@ class RedisServer implements IRedisServer
 	}
 
 	/**
-	 * Atomically sets key to value and returns the old value stored at key. Returns an error when key exists but does not hold a string value.
-	 * From time to time we need to get the value of the counter and reset it to zero atomically. This can be done using GETSET mycounter "0".
+	 * Atomically sets key to value and returns the old value stored at key.
+	 * Returns an error when key exists but does not hold a string value.
+	 *
+	 * From time to time we need to get the value of the counter and reset it to zero atomically.
+	 * This can be done using GETSET mycounter "0".
 	 * @param string $key
 	 * @param string $value
 	 * @return string
