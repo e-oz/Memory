@@ -382,6 +382,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 * and Process 2 can decide, what he want to do - use old value and not spent time to database, or something else.
 	 * @param mixed $key
 	 * @param mixed $auto_unlocker_variable - pass empty, just declared variable
+	 * @return bool
 	 */
 	public function lock_key($key, &$auto_unlocker_variable)
 	{
