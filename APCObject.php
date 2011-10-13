@@ -116,7 +116,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 
 	/**
 	 * Returns, how many seconds left till key expiring.
-	 * @param  $key
+	 * @param string $key
 	 * @return int
 	 */
 	public function getKeyTTL($key)
@@ -323,16 +323,17 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	}
 
 	/**
-	 * Increment value of key
+	 * Increment value of the key
 	 * @param string $key
 	 * @param mixed $by_value
-	 * if stored value is array:
-	 *	if $by_value is value in array, new element will be pushed to the end of array,
-	 *	if $by_value is key=>value array, key=>value pair will be added (or updated)
+	 * if stored value is an array:
+	 *			if $by_value is a value in array, new element will be pushed to the end of array,
+	 *			if $by_value is a key=>value array, new key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
+	 * @param int $ttl - set time to live for key
 	 * @return int|string|array new value of key
 	 */
-	public function increment($key, $by_value = 1, $limit_keys_count = 0)
+	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200)
 	{
 		if (empty($key))
 		{
@@ -345,7 +346,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		$value = apc_fetch($this->prefix.$key, $success);
 		if (!$success)
 		{
-			if ($this->save($key, $by_value)) return $by_value;
+			if ($this->save($key, $by_value, $ttl)) return $by_value;
 			else return false;
 		}
 		if (is_array($value))
@@ -360,14 +361,14 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			}
 			else $value[] = $by_value;
 
-			if ($this->save($key, $value)) return $value;
+			if ($this->save($key, $value, $ttl)) return $value;
 			else return false;
 		}
 		elseif (is_numeric($value) && is_numeric($by_value)) return apc_inc($this->prefix.$key, $by_value);
 		else
 		{
 			$value .= $by_value;
-			if ($this->save($key, $value)) return $value;
+			if ($this->save($key, $value, $ttl)) return $value;
 			else return false;
 		}
 	}

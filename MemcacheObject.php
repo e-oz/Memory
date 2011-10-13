@@ -226,9 +226,10 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	 *	 if $by_value is value in array, new element will be pushed to the end of array,
 	 *	 if $by_value is key=>value array, key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
+	 * @param int $ttl
 	 * @return int|string|array new value of key
 	 */
-	public function increment($key, $by_value = 1, $limit_keys_count = 0)
+	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200)
 	{
 		if (empty($key))
 		{
@@ -241,7 +242,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		$value = $this->memcache->get($this->prefix.$key);
 		if (empty($value))
 		{
-			if ($this->save($key, $by_value)) return $by_value;
+			if ($this->save($key, $by_value, $ttl)) return $by_value;
 			else return false;
 		}
 
@@ -257,7 +258,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			}
 			else $value[] = $by_value;
 
-			if ($this->save($key, $value)) return $value;
+			if ($this->save($key, $value, $ttl)) return $value;
 			else return false;
 		}
 		elseif (is_numeric($value) && is_numeric($by_value))
@@ -266,7 +267,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			else
 			{
 				$value += $by_value;
-				if ($this->save($key, $value)) return $value;
+				if ($this->save($key, $value, $ttl)) return $value;
 				else return false;
 			}
 		}
@@ -274,7 +275,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		{
 			//append() method not used to not break compatibility with Memcache
 			$value .= $by_value;
-			if ($this->save($key, $value)) return $value;
+			if ($this->save($key, $value, $ttl)) return $value;
 			else return false;
 		}
 	}

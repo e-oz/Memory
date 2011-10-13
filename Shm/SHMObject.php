@@ -537,9 +537,10 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	 *			 if $by_value is value in array, new element will be pushed to the end of array,
 	 *			if $by_value is key=>value array, key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
+	 * @param int $ttl
 	 * @return int|string|array new value of key
 	 */
-	public function increment($key, $by_value = 1, $limit_keys_count = 0)
+	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200)
 	{
 		if (empty($key))
 		{
@@ -555,7 +556,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$map = $this->mem_object->read('map');
 		if (!array_key_exists($key, $map))
 		{
-			if ($this->save($key, $by_value)) return $by_value;
+			if ($this->save($key, $by_value, $ttl)) return $by_value;
 			else return false;
 		}
 		$value = $this->read($key);
@@ -572,7 +573,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		}
 		elseif (is_numeric($value) && is_numeric($by_value)) $value += $by_value;
 		else $value .= $by_value;
-		$this->save($key, $value);
+		$this->save($key, $value, $ttl);
 		return $value;
 	}
 

@@ -171,6 +171,11 @@ class TestMemoryObject implements ITest
 		$check = $this->mem->read(__METHOD__);
 		$result->Expected(array(array(3, 4, 5, 6, 7, 8, 9, 10, 11, 100), array(3, 4, 5, 6, 7, 8, 9, 10, 11, 100)))->Result(array($call, $check));
 
+		$this->results[] = $result = new TestResult(__METHOD__.__LINE__);
+		$this->mem->save(__METHOD__, 1, 10);
+		$this->mem->increment(__METHOD__, 2, 0, 25);
+		$check = $this->mem->read(__METHOD__, $ttl_left);
+		$result->Expected(array(3, 25))->Result(array($check, $ttl_left));
 	}
 
 	public function test_lock_key()

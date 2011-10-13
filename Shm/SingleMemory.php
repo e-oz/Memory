@@ -303,9 +303,10 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 	 *			 if $by_value is value in array, new element will be pushed to the end of array,
 	 *			if $by_value is key=>value array, key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
+	 * @param int $ttl
 	 * @return int|string|array new value of key
 	 */
-	public function increment($key, $by_value = 1, $limit_keys_count = 0)
+	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200)
 	{
 		if (empty($key))
 		{
@@ -344,6 +345,8 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 			$value .= $by_value;
 		}
 
+		$ttl = intval($ttl);
+		if ($ttl > 0) $this->mem[self::map_key_ttl][$key] = time()+$ttl;
 		$this->mem[self::map_keys][$key] = $value;
 		$this->refresh();
 		return $value;

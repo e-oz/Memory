@@ -174,16 +174,17 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	}
 
 	/**
-	 * Increment value of key
-	 * @param string $key
-	 * @param mixed $by_value
-	 * if stored value is array:
-	 *			 if $by_value is value in array, new element will be pushed to the end of array,
-	 *			if $by_value is key=>value array, key=>value pair will be added (or updated)
-	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
-	 * @return int|string|array new value of key
-	 */
-	public function increment($key, $by_value = 1, $limit_keys_count = 0)
+		 * Increment value of the key
+		 * @param string $key
+		 * @param mixed $by_value
+		 * if stored value is an array:
+		 *			if $by_value is a value in array, new element will be pushed to the end of array,
+		 *			if $by_value is a key=>value array, new key=>value pair will be added (or updated)
+		 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
+		 * @param int $ttl - set time to live for key
+		 * @return int|string|array new value of key
+		 */
+	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200)
 	{
 		if (empty($key))
 		{
@@ -192,9 +193,9 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		}
 
 		if (!$this->acquire_key($key, $auto_unlocker)) return $this->ReportError('Can not acquire key', __LINE__);
-		
+
 		$value = $this->read($key);
-		if ($value===null || $value===false) return $this->save($key, $by_value);
+		if ($value===null || $value===false) return $this->save($key, $by_value, $ttl);
 
 		if (is_numeric($value)) $value += $by_value;
 		elseif (is_array($value))
@@ -211,7 +212,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		}
 		else $value .= $by_value;
 
-		if ($this->save($key, $value)) return $value;
+		if ($this->save($key, $value, $ttl)) return $value;
 		else return false;
 	}
 

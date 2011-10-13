@@ -65,16 +65,17 @@ interface IMemoryStorage
 	public function select_fx($fx, $get_array = false);
 
 	/**
-	 * Increment value of key
+	 * Increment value of the key
 	 * @param string $key
 	 * @param mixed $by_value
-	 * if stored value is array:
-	 *			 if $by_value is value in array, new element will be pushed to the end of array,
-	 *			if $by_value is key=>value array, key=>value pair will be added (or updated)
+	 * if stored value is an array:
+	 *			if $by_value is a value in array, new element will be pushed to the end of array,
+	 *			if $by_value is a key=>value array, new key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
+	 * @param int $ttl - set time to live for key
 	 * @return int|string|array new value of key
 	 */
-	public function increment($key, $by_value = 1, $limit_keys_count = 0);
+	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200);
 
 	/**
 	 * Get exclusive mutex for key. Key will be still accessible to read and write, but

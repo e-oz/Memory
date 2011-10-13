@@ -107,9 +107,15 @@ If you can't install any third-party packages, you can use **Shared Memory** - b
 + **Memcache** - speed 192 (slowest)
 
 
-TODO:
+Tests:
 =====
-+ Create Wiki pages (don't know yet what to write :))
+Just call
+
+	Tester::MakeTest(new TestMemoryObject(new \Jamm\Memory\APCObject('test')));
+
+or
+
+	Tester::MakeTest(new TestMemoryObject(new \Jamm\Memory\RedisObject('test')));
 
 ***
 _Look at the comments in demo.php for additional info. Ask, what you want to see commented._
