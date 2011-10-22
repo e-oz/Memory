@@ -140,14 +140,14 @@ class ShmMem extends SingleMemory
 				$stat['writers'] = $q_stat['msg_qnum'];
 				$stat['writers_qid'] = $this->sem->getWriteQKey();
 			}
-			$this->err_log = array_merge($this->sem->getErrLog(), $this->err_log);
+			$this->addErrLog($this->sem->getErrLog());
 		}
 
 		$this->readmemory();
 		$stat['info'] = $this->mem[self::map_info];
 		$stat['size'] = strlen(serialize($this->mem));
 		$stat['max_size'] = shmop_size($this->shm);
-		$stat['err_log'] = $this->err_log;
+		$stat['err_log'] = $this->getErrLog();
 
 		return $stat;
 	}

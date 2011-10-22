@@ -109,13 +109,22 @@ If you can't install any third-party packages, you can use **Shared Memory** - b
 
 Tests:
 =====
-Just call
 
-	Tester::MakeTest(new TestMemoryObject(new \Jamm\Memory\APCObject('test')));
+	<?php
+	namespace Jamm\Memory\Tests;
+	
+	header('Content-type: text/plain; charset=utf-8');
+	
+	$testRedisObject = new TestMemoryObject(new \Jamm\Memory\RedisObject('test'));
+	$testRedisObject->RunTests();
+	$testRedisServer = new TestRedisServer();
+	$testRedisServer->RunTests();
 
-or
-
-	Tester::MakeTest(new TestMemoryObject(new \Jamm\Memory\RedisObject('test')));
+	$printer = new \Jamm\Tester\ResultsPrinter();	
+	$printer->addTests($testRedisObject->getTests());
+	$printer->addTests($testRedisServer->getTests());
+	$printer->printResultsLine();
+	$printer->printFailedTests();
 
 ***
 _Look at the comments in demo.php for additional info. Ask, what you want to see commented._

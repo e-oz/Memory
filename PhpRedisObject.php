@@ -12,7 +12,7 @@ class PhpRedisObject extends RedisObject
 		}
 		catch (\RedisException $e)
 		{
-			return $this->ReportError('connection error:'.$e->getMessage());
+			return $this->ReportError('connection error:'.$e->getMessage(), __LINE__);
 		}
 	}
 }

@@ -115,4 +115,6 @@ interface IMemoryStorage
 	public function get_stat();
 
 	public function getErrLog();
+
+	public function set_errors_triggering($errors_triggering = true);
 }

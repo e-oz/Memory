@@ -443,7 +443,6 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * @param string $key
 	 * @param array|string $tags
-	 * @param int $ttl
 	 * @return bool
 	 */
 	public function set_tags($key, $tags)
