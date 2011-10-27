@@ -3,16 +3,16 @@ namespace Jamm\Memory;
 
 /**
  * RedisServer allows you to work with Redis storage in PHP
- * 
+ *
  * Almost all methods of this class have same names as commands of Redis,
  * each method is documented by PhpDoc-commentary.
- * 
+ *
  * This class doesn't require IRedisServer interface, you can just comment out "//implements IRedisServer"
  * Interface exists just for smart code completion in IDE.
- * 
- * You can send custom command using send_command() method, 
+ *
+ * You can send custom command using send_command() method,
  * and read errors by getLastErr() and getErrLog() methods.
- * 
+ *
  * All debug-commands declared as magic methods and implemented via __call() method:
  * @method mixed DEBUG_OBJECT($key) Get debugging information about a key
  * @method mixed DEBUG_SEGFAULT() Make the server crash
@@ -344,7 +344,9 @@ class RedisServer implements IRedisServer
 	 */
 	public function sRem($set, $value)
 	{
-		return $this->send_command('srem', $set, $value);
+		if (!is_array($value)) $value = func_get_args();
+		else array_unshift($value, $set);
+		return $this->__call('srem', $value);
 	}
 
 	/**
