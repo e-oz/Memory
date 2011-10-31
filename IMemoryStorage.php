@@ -17,9 +17,9 @@ interface IMemoryStorage
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k - key
-	 * @param mixed $v - value
-	 * @param int $ttl - time to live (store) in seconds
+	 * @param string $k          - key
+	 * @param mixed $v           - value
+	 * @param int $ttl           - time to live (store) in seconds
 	 * @param array|string $tags - array of tags for this key
 	 * @return bool
 	 */
@@ -72,7 +72,7 @@ interface IMemoryStorage
 	 *			if $by_value is a value in array, new element will be pushed to the end of array,
 	 *			if $by_value is a key=>value array, new key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
-	 * @param int $ttl - set time to live for key
+	 * @param int $ttl              - set time to live for key
 	 * @return int|string|array new value of key
 	 */
 	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200);

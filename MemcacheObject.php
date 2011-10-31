@@ -32,7 +32,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		}
 
 		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
-		$this->ttl_table_name = self::ttl_table_prefix.$this->prefix;
+		$this->ttl_table_name  = self::ttl_table_prefix.$this->prefix;
 		$this->tags_table_name = self::tags_table_prefix.$this->prefix;
 	}
 
@@ -74,7 +74,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		$ttl_table = $this->read_TTL_table();
+		$ttl_table     = $this->read_TTL_table();
 		$ttl_table[$k] = $ttl;
 		$this->save_TTL_table($ttl_table);
 
@@ -114,7 +114,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		if (empty($tags_table)) $tags_table = array();
 		$tags_table_changed = false;
 
-		$ttl_table = $this->read_TTL_table();
+		$ttl_table         = $this->read_TTL_table();
 		$ttl_table_changed = false;
 
 		$r = true;
@@ -197,7 +197,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	{
 		$ttl_table = $this->read_TTL_table();
 		if (empty($ttl_table)) return true;
-		$t = time();
+		$t       = time();
 		$changed = false;
 		foreach ($ttl_table as $key => $ttl)
 		{
@@ -290,7 +290,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	{
 		$r = $this->memcache->add($this->lock_key_prefix.$key, 1, null, self::key_lock_time);
 		if (!$r) return false;
-		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
+		$auto_unlocker_variable      = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
 		return true;
 	}
@@ -311,12 +311,12 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		}
 		if (is_array($k))
 		{
-			$data = array();
+			$data       = array();
 			$return_ttl = ($ttl_left!==-1 ? true : false);
-			$ttl_left = array();
+			$ttl_left   = array();
 			foreach ($k as $key)
 			{
-				$key = (string)$key;
+				$key        = (string)$key;
 				$data[$key] = $this->memcache->get($this->prefix.$key);
 				if ($data[$key]===false || $data[$key]===null)
 				{
@@ -358,9 +358,9 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k - key
-	 * @param mixed $v - value
-	 * @param int $ttl - time to live (store) in seconds
+	 * @param string $k          - key
+	 * @param mixed $v           - value
+	 * @param int $ttl           - time to live (store) in seconds
 	 * @param array|string $tags - array of tags for this key
 	 * @return bool
 	 */
@@ -372,7 +372,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		$k = (string)$k;
+		$k   = (string)$k;
 		$ttl = $this->ttl_to_expiration($ttl);
 
 		if (false===$this->memcache->set($this->prefix.$k, $v, 0, $ttl))
@@ -405,7 +405,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function select_fx($fx, $get_array = false)
 	{
-		$arr = array();
+		$arr  = array();
 		$keys = $this->get_keys();
 		if (empty($keys)) return false;
 
@@ -455,7 +455,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 
 		if (!empty($tags))
 		{
-			$key = (string)$key;
+			$key        = (string)$key;
 			$tags_table = $this->memcache->get($this->tags_table_name);
 			if (empty($tags_table)) $tags_table = array();
 			if (!array_key_exists($key, $tags_table) || $tags!=$tags_table[$key])
@@ -471,7 +471,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	public function getKeyTTL($key)
 	{
 		$ttl_table = $this->read_TTL_table();
-		$key = (string)$key;
+		$key       = (string)$key;
 		if (!array_key_exists($key, $ttl_table)) return false;
 		else return ($ttl_table[$key]-time());
 	}

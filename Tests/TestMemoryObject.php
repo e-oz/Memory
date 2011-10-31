@@ -288,7 +288,7 @@ class TestMemoryObject extends \Jamm\Tester\ClassTest
 		$this->mem->save(__METHOD__.':1', 1);
 		$this->mem->save(__METHOD__.':2', 1);
 		$this->mem->save(__METHOD__.':3', 1);
-		$arr = array(__METHOD__.':1', __METHOD__.':2', __METHOD__.':3');
+		$arr  = array(__METHOD__.':1', __METHOD__.':2', __METHOD__.':3');
 		$call = $this->mem->get_keys();
 		if (is_array($call)) $c = count($call);
 		else $c = 0;

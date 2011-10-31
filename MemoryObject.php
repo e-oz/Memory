@@ -13,15 +13,15 @@ abstract class MemoryObject implements IMemoryStorage
 
 	public function getLastErr()
 	{
-		$t = $this->last_err;
+		$last_err       = $this->last_err;
 		$this->last_err = '';
-		return $t;
+		return $last_err;
 	}
 
 	protected function ReportError($msg, $line)
 	{
-		$error_message = $line.': '.$msg;
-		$this->last_err = $error_message;
+		$error_message   = $line.': '.$msg;
+		$this->last_err  = $error_message;
 		$this->err_log[] = $error_message;
 		if ($this->errors_triggering) trigger_error($error_message, E_USER_WARNING);
 		return false;

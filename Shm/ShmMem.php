@@ -58,12 +58,12 @@ class ShmMem extends SingleMemory
 		set_time_limit(180);
 		if (is_array($this->mem))
 		{
-			$this->mem[self::map_info][self::map_info_resized] = $this->mem[self::map_info][self::map_info_resized]+1;
+			$this->mem[self::map_info][self::map_info_resized]    = $this->mem[self::map_info][self::map_info_resized]+1;
 			$this->mem[self::map_info][self::map_info_resizetime] = time();
 		}
 		shmop_delete($this->shm);
 		shmop_close($this->shm);
-		$t = serialize($this->mem);
+		$t       = serialize($this->mem);
 		$memsize = strlen($t);
 		if ($memsize > $size) $size = $memsize+1000;
 		$this->shm = shmop_open($this->shmkey, "n", 0777, $size);
@@ -91,8 +91,8 @@ class ShmMem extends SingleMemory
 				if ($ttl_value < $_time) unset($this->mem[self::map_keys][$ttl_key]);
 			}
 		}
-		$t = serialize($this->mem);
-		$size = strlen($t);
+		$t            = serialize($this->mem);
+		$size         = strlen($t);
 		$current_size = shmop_size($this->shm);
 		if ($size > $current_size) $r = $this->resize($size+ceil($current_size/5)+1000);
 		else $r = shmop_write($this->shm, str_pad($t, shmop_size($this->shm), ' ', STR_PAD_RIGHT), 0);
@@ -122,32 +122,32 @@ class ShmMem extends SingleMemory
 
 	public function get_stat()
 	{
-		$stat['shm_id'] = $this->shm;
+		$stat['shm_id']  = $this->shm;
 		$stat['shm_key'] = $this->shmkey;
 		if (is_a($this->sem, 'MultiAccess'))
 		{
 			$q_read = msg_get_queue($this->sem->getReadQKey());
 			if (!empty($q_read))
 			{
-				$q_stat = msg_stat_queue($q_read);
-				$stat['readers'] = $q_stat['msg_qnum'];
+				$q_stat              = msg_stat_queue($q_read);
+				$stat['readers']     = $q_stat['msg_qnum'];
 				$stat['readers_qid'] = $this->sem->getReadQKey();
 			}
 			$q_writers = msg_get_queue($this->sem->getWriteQKey());
 			if (!empty($q_writers))
 			{
-				$q_stat = msg_stat_queue($q_writers);
-				$stat['writers'] = $q_stat['msg_qnum'];
+				$q_stat              = msg_stat_queue($q_writers);
+				$stat['writers']     = $q_stat['msg_qnum'];
 				$stat['writers_qid'] = $this->sem->getWriteQKey();
 			}
 			$this->addErrLog($this->sem->getErrLog());
 		}
 
 		$this->readmemory();
-		$stat['info'] = $this->mem[self::map_info];
-		$stat['size'] = strlen(serialize($this->mem));
+		$stat['info']     = $this->mem[self::map_info];
+		$stat['size']     = strlen(serialize($this->mem));
 		$stat['max_size'] = shmop_size($this->shm);
-		$stat['err_log'] = $this->getErrLog();
+		$stat['err_log']  = $this->getErrLog();
 
 		return $stat;
 	}

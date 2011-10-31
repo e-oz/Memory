@@ -144,7 +144,7 @@ class MultiAccess implements IMutex
 
 	protected function clean_queue($type = self::writers)
 	{
-		$q = $this->select_q($type);
+		$q    = $this->select_q($type);
 		$stat = msg_stat_queue($q);
 		if ($stat['msg_qnum'] > 0)
 		{
@@ -162,10 +162,10 @@ class MultiAccess implements IMutex
 		$sent = msg_send($q, $type, $type, false, false, $err);
 		if ($sent==false)
 		{
-			$counter = $this->get_counter($type);
+			$counter         = $this->get_counter($type);
 			$this->err_log[] = 'Message was not sent to queue '.($type==self::readers ? 'readers '.$this->read_q_key
 					: 'writers '.$this->write_q_key)
-							   .' counter: '.$counter.', error: '.$err;
+					.' counter: '.$counter.', error: '.$err;
 			return false;
 		}
 		return true;
@@ -183,7 +183,7 @@ class MultiAccess implements IMutex
 			{
 				$this->err_log[] = 'Message was not recieved from queue '.($type==self::readers
 						? 'readers '.$this->read_q_key : 'writers '.$this->write_q_key)
-								   .' counter: '.$counter.', error: '.$err;
+						.' counter: '.$counter.', error: '.$err;
 				return false;
 			}
 		}
@@ -192,7 +192,7 @@ class MultiAccess implements IMutex
 
 	public function get_counter($type = self::writers)
 	{
-		$q = $this->select_q($type);
+		$q    = $this->select_q($type);
 		$stat = msg_stat_queue($q);
 		return $stat['msg_qnum'];
 	}
@@ -258,7 +258,7 @@ class MultiAccess implements IMutex
 	{
 		if ($this->writers_count > 0)
 		{
-			$this->err_log[] = 'writers count = '.$this->writers_count;
+			$this->err_log[]     = 'writers count = '.$this->writers_count;
 			$this->writers_count = 0;
 			$this->release_access_write();
 		}
@@ -266,7 +266,7 @@ class MultiAccess implements IMutex
 
 		if ($this->readers_count > 0)
 		{
-			$this->err_log[] = 'readers count = '.$this->readers_count;
+			$this->err_log[]     = 'readers count = '.$this->readers_count;
 			$this->readers_count = 0;
 			$this->release_access_read();
 		}

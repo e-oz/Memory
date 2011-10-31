@@ -49,14 +49,14 @@ class RedisServer implements IRedisServer
 
 	public function getLastErr()
 	{
-		$t = $this->last_err;
+		$t              = $this->last_err;
 		$this->last_err = '';
 		return $t;
 	}
 
 	public function ReportError($msg, $line)
 	{
-		$this->last_err = $line.': '.$msg;
+		$this->last_err  = $line.': '.$msg;
 		$this->err_log[] = $line.': '.$msg;
 		return false;
 	}
@@ -101,7 +101,7 @@ class RedisServer implements IRedisServer
 
 	public function read_reply()
 	{
-		$reply = trim(fgets($this->connection));
+		$reply    = trim(fgets($this->connection));
 		$response = null;
 
 		/**
@@ -125,7 +125,7 @@ class RedisServer implements IRedisServer
 				if ($reply=='$-1') return null;
 				$read = 0;
 				$size = intval(substr($reply, 1));
-				$chi = 0;
+				$chi  = 0;
 				if ($size > 0)
 				{
 					do
@@ -257,8 +257,8 @@ class RedisServer implements IRedisServer
 	public function hGetAll($key)
 	{
 		$arr = $this->send_command('hgetall', $key);
-		$c = count($arr);
-		$r = array();
+		$c   = count($arr);
+		$r   = array();
 		for ($i = 0; $i < $c; $i += 2)
 		{
 			$r[$arr[$i]] = $arr[$i+1];
@@ -1377,7 +1377,7 @@ class RedisServer implements IRedisServer
 		if (!empty($weights))
 		{
 			$destination[] = 'WEIGHTS';
-			$destination = array_merge($destination, $weights);
+			$destination   = array_merge($destination, $weights);
 		}
 		if (!empty($aggregate))
 		{
@@ -1557,7 +1557,7 @@ class RedisServer implements IRedisServer
 		if (!empty($weights))
 		{
 			$destination[] = 'WEIGHTS';
-			$destination = array_merge($destination, $weights);
+			$destination   = array_merge($destination, $weights);
 		}
 		if (!empty($aggregate))
 		{

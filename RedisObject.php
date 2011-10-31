@@ -17,7 +17,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		if (!empty($RedisServer)) $this->redis = $RedisServer;
 		else $this->setDefaultRedisServer();
 
-		$this->tag_prefix = self::tag_prefix.$this->prefix;
+		$this->tag_prefix      = self::tag_prefix.$this->prefix;
 		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
 	}
 
@@ -67,9 +67,9 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k - key
-	 * @param mixed $v - value
-	 * @param int $ttl - time to live (store) in seconds
+	 * @param string $k          - key
+	 * @param mixed $v           - value
+	 * @param int $ttl           - time to live (store) in seconds
 	 * @param array|string $tags - array of tags for this key
 	 * @return bool
 	 */
@@ -111,7 +111,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	{
 		if (!is_array($k)) $k = array($k);
 		$todel = array();
-		$tags = $this->redis->Keys($this->tag_prefix.'*');
+		$tags  = $this->redis->Keys($this->tag_prefix.'*');
 		foreach ($k as $key)
 		{
 			$todel[] = $this->prefix.$key;
@@ -154,8 +154,8 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function select_fx($fx, $get_array = false)
 	{
-		$arr = array();
-		$l = strlen($this->prefix);
+		$arr  = array();
+		$l    = strlen($this->prefix);
 		$keys = $this->redis->Keys($this->prefix.'*');
 		foreach ($keys as $key)
 		{
@@ -174,16 +174,16 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	}
 
 	/**
-		 * Increment value of the key
-		 * @param string $key
-		 * @param mixed $by_value
-		 * if stored value is an array:
-		 *			if $by_value is a value in array, new element will be pushed to the end of array,
-		 *			if $by_value is a key=>value array, new key=>value pair will be added (or updated)
-		 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
-		 * @param int $ttl - set time to live for key
-		 * @return int|string|array new value of key
-		 */
+	 * Increment value of the key
+	 * @param string $key
+	 * @param mixed $by_value
+	 * if stored value is an array:
+	 *			if $by_value is a value in array, new element will be pushed to the end of array,
+	 *			if $by_value is a key=>value array, new key=>value pair will be added (or updated)
+	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
+	 * @param int $ttl              - set time to live for key
+	 * @return int|string|array new value of key
+	 */
 	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200)
 	{
 		if (empty($key))
@@ -227,7 +227,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		$r = $this->redis->SetNX($this->lock_key_prefix.$key, 1);
 		if (!$r) return false;
 		$this->redis->Expire($this->lock_key_prefix.$key, self::key_lock_time);
-		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
+		$auto_unlocker_variable      = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
 		return true;
 	}
@@ -259,7 +259,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	/** Return array of all stored keys */
 	public function get_keys()
 	{
-		$l = strlen($this->prefix);
+		$l    = strlen($this->prefix);
 		$keys = $this->redis->Keys($this->prefix.'*');
 		foreach ($keys as &$key) $key = substr($key, $l);
 		return $keys;

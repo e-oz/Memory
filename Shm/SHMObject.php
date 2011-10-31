@@ -22,7 +22,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	const max_ttl = 2592000;
 
 	/**
-	 * @param string $id path to existing file, __FILE__ usually, will define scope (like prefix).
+	 * @param string $id    path to existing file, __FILE__ usually, will define scope (like prefix).
 	 * @param integer $size initial size of the memory block in bites
 	 * @param integer $maxsize
 	 */
@@ -53,7 +53,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		}
 
 		//Create an mem-object to store the Map
-		$map_id_key = ftok($this->id, 'h')+12;
+		$map_id_key       = ftok($this->id, 'h')+12;
 		$this->mem_object = new ShmMem($map_id_key, $this->shmsize, $this->max_size);
 		if (is_object($this->mem_object)) $this->ini = true;
 		else
@@ -67,9 +67,9 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	/**
 	 * Add value to memory storage, only if this key does not exists (or false will be returned).
 	 *
-	 * @param string $k key
-	 * @param mixed $v value
-	 * @param integer $ttl Time To Live in seconds (value will be added to the current time)
+	 * @param string $k          key
+	 * @param mixed $v           value
+	 * @param integer $ttl       Time To Live in seconds (value will be added to the current time)
 	 * @param array|string $tags tag array of tags for this key
 	 * @return bool
 	 */
@@ -80,7 +80,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			$this->ReportError('empty keys and values are not allowed', __LINE__);
 			return false;
 		}
-		$k = (string)$k;
+		$k             = (string)$k;
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
@@ -122,9 +122,9 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k key
-	 * @param mixed $v value
-	 * @param integer $ttl Time To Live in seconds (value will be added to the current time)
+	 * @param string $k          key
+	 * @param mixed $v           value
+	 * @param integer $ttl       Time To Live in seconds (value will be added to the current time)
 	 * @param string|array $tags tag array of tags for this key
 	 * @return bool
 	 */
@@ -136,18 +136,18 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			return false;
 		}
 
-		$k = (string)$k;
+		$k             = (string)$k;
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
 			$this->ReportError('write mutex not acquired', __LINE__);
 			return false;
 		}
-		$map = $this->mem_object->read('map');
+		$map             = $this->mem_object->read('map');
 		$data_serialized = 0;
 		if (!is_scalar($v))
 		{
-			$v = serialize($v);
+			$v               = serialize($v);
 			$data_serialized = 1;
 		}
 		$size = strlen($v);
@@ -170,7 +170,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 				{
 					$this->del($k);
 					$this->del_old();
-					$map = $this->mem_object->read('map');
+					$map   = $this->mem_object->read('map');
 					$start = $this->find_free_space($map, $size);
 					if ($start===false)
 					{
@@ -183,7 +183,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$r = $this->write_data($v, $start);
 		if ($r===false) return false;
 		$set_ttl = 0;
-		$ttl = intval($ttl);
+		$ttl     = intval($ttl);
 		if ($ttl > self::max_ttl) $ttl = self::max_ttl;
 		if ($ttl > 0) $set_ttl = time()+$ttl;
 		$map[$k] = array(self::map_key_start => $start, self::map_key_fin => ($start+$size));
@@ -199,7 +199,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		{
 			if (!is_array($tags)) $tags = array($tags);
 			$tags_was_changed = false;
-			$mem_tags = $this->mem_object->read('tags');
+			$mem_tags         = $this->mem_object->read('tags');
 			foreach ($tags as $tag)
 			{
 				if (empty($mem_tags[$tag]) || !in_array($k, $mem_tags[$tag]))
@@ -226,8 +226,8 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$_end = $this->max_size;
 		usort($map, array($this, 'sort_map'));
 		$imap = array_values($map);
-		$i = 0;
-		$eoa = $c-1; //end of array
+		$i    = 0;
+		$eoa  = $c-1; //end of array
 		if ($imap[0][0] > $size) return 0;
 		for (; $i < $c; $i++)
 		{
@@ -259,7 +259,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	 * Read data from memory storage
 	 *
 	 * @param string|array $k key or array of keys
-	 * @param int $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
+	 * @param int $ttl_left   = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
 	 * @return mixed
 	 */
 	public function read($k, &$ttl_left = -1)
@@ -284,9 +284,9 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 
 		if (is_array($k))
 		{
-			$todelete = array();
+			$todelete    = array();
 			$from_points = array();
-			$to_points = array();
+			$to_points   = array();
 			foreach ($k as $key)
 			{
 				$key = (string)$key;
@@ -297,7 +297,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 					continue;
 				}
 				$from_points[] = $map[$key][self::map_key_start];
-				$to_points[] = $map[$key][self::map_key_fin];
+				$to_points[]   = $map[$key][self::map_key_fin];
 			}
 			if (!empty($todelete)) $this->del($todelete);
 			$data = $this->read_data($from_points, $to_points, $k);
@@ -338,7 +338,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			}
 
 			$from = $map[$k][self::map_key_start];
-			$to = $map[$k][self::map_key_fin];
+			$to   = $map[$k][self::map_key_fin];
 			$data = $this->read_data($from, $to);
 			if ($map[$k][self::map_key_serialized]==1) $data = unserialize($data);
 			else
@@ -381,8 +381,8 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	/**
 	 * Read data from storage directly
 	 *
-	 * @param int|array $from (integer or array of integers)
-	 * @param int|array $to (integer or array of integers)
+	 * @param int|int[] $from (integer or array of integers)
+	 * @param int|int[] $to   (integer or array of integers)
 	 * @param array $keys
 	 * @return string
 	 */
@@ -390,8 +390,8 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	{
 		if (is_array($from) && is_array($to) && !empty($keys))
 		{
-			$i = 0;
-			$c = count($from);
+			$i    = 0;
+			$c    = count($from);
 			$data = array();
 			for (; $i < $c; $i++)
 			{
@@ -456,8 +456,8 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			$this->ReportError('write mutex was not acquired', __LINE__);
 			return false;
 		}
-		$r = 0;
-		$map = $this->mem_object->read('map');
+		$r     = 0;
+		$map   = $this->mem_object->read('map');
 		$todel = array();
 		foreach ($map as $k => &$v)
 		{
@@ -584,29 +584,29 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	public function get_stat()
 	{
 		$stat = array();
-		$map = $this->mem_object->read('map');
+		$map  = $this->mem_object->read('map');
 		$size = 0;
 		if (!empty($map)) foreach ($map as $v) $size += ($v[self::map_key_fin]-$v[self::map_key_start]);
 		$stat['size'] = $size;
-		$q_read = msg_get_queue($this->mutex->getReadQKey());
+		$q_read       = msg_get_queue($this->mutex->getReadQKey());
 		if (!empty($q_read))
 		{
-			$q_stat = msg_stat_queue($q_read);
-			$stat['readers'] = $q_stat['msg_qnum'];
+			$q_stat              = msg_stat_queue($q_read);
+			$stat['readers']     = $q_stat['msg_qnum'];
 			$stat['readers_qid'] = $this->mutex->getReadQKey();
 		}
 		$q_writers = msg_get_queue($this->mutex->getWriteQKey());
 		if (!empty($q_writers))
 		{
-			$q_stat = msg_stat_queue($q_writers);
-			$stat['writers'] = $q_stat['msg_qnum'];
+			$q_stat              = msg_stat_queue($q_writers);
+			$stat['writers']     = $q_stat['msg_qnum'];
 			$stat['writers_qid'] = $this->mutex->getWriteQKey();
 		}
-		$stat['shm_key'] = $this->shm_data_key;
-		$stat['shm_id'] = $this->shm_data_id;
+		$stat['shm_key']  = $this->shm_data_key;
+		$stat['shm_id']   = $this->shm_data_id;
 		$stat['max_size'] = $this->max_size;
-		$stat['head'] = $this->mem_object->get_stat();
-		$stat['err_log'] = $this->mutex->getErrLog();
+		$stat['head']     = $this->mem_object->get_stat();
+		$stat['err_log']  = $this->mutex->getErrLog();
 		return $stat;
 	}
 
@@ -625,7 +625,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	{
 		$r = $this->mem_object->add(self::lock_key_prefix.$key, 1, self::key_lock_time);
 		if (!$r) return false;
-		$auto_unlocker_variable = new \Jamm\Memory\KeyAutoUnlocker(array($this, 'unlock_key'));
+		$auto_unlocker_variable      = new \Jamm\Memory\KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
 		return true;
 	}
