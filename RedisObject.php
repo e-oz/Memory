@@ -12,7 +12,6 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	protected $keys_list;
 	protected $tag_prefix;
 	protected $lock_key_prefix;
-	protected $optimize_select_fx = false;
 
 	public function __construct($ID = '', IRedisServer $RedisServer = NULL)
 	{
@@ -277,7 +276,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		{
 			$this->prefix = str_replace('.', '_', $ID).'.';
 		}
-		$this->keys_list       = self::keys_list;
+		$this->keys_list       = self::keys_list.$this->prefix;
 		$this->tag_prefix      = self::tag_prefix.$this->prefix;
 		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
 	}
