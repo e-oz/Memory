@@ -22,8 +22,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function __construct($ID = '')
 	{
-		if (!empty($ID)) $this->prefix = $ID;
-		$this->set_ID($this->prefix);
+		$this->set_ID($ID);
 	}
 
 	/**

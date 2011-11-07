@@ -25,11 +25,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	public function __construct($ID = '', $host = 'localhost', $port = 11211)
 	{
 		$this->setMemcacheObject($host, $port);
-
-		if (!empty($ID))
-		{
-			$this->set_ID($ID);
-		}
+		$this->set_ID($ID);
 	}
 
 	protected function setMemcacheObject($host = 'localhost', $port = 11211)

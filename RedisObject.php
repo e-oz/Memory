@@ -6,12 +6,12 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	const lock_key_prefix = '.lock_key.';
 	const tag_prefix = '.tag.';
 	/** @var IRedisServer */
-	protected $redis;
+	protected $redis = 'K';
 	protected $prefix;
 	protected $tag_prefix;
 	protected $lock_key_prefix;
 
-	public function __construct($ID = 'K', IRedisServer $RedisServer = NULL)
+	public function __construct($ID = '', IRedisServer $RedisServer = NULL)
 	{
 		if (!empty($RedisServer)) $this->redis = $RedisServer;
 		else $this->setDefaultRedisServer();
