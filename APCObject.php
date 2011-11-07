@@ -201,8 +201,8 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			foreach ($k as $key)
 			{
 				$todel[] = $this->prefix.$key;
-				if (apc_exists($this->tags_prefix.$key)) $todel[] = $this->tags_prefix.$key;
-				if (apc_exists($this->lock_key_prefix.$key)) $todel[] = $this->lock_key_prefix.$key;
+				if (\apc_exists($this->tags_prefix.$key)) $todel[] = $this->tags_prefix.$key;
+				if (\apc_exists($this->lock_key_prefix.$key)) $todel[] = $this->lock_key_prefix.$key;
 			}
 			$r = apc_delete($todel);
 			if (empty($r)) return true;
@@ -210,8 +210,8 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		}
 		else
 		{
-			if (apc_exists($this->tags_prefix.$k)) apc_delete($this->tags_prefix.$k);
-			if (apc_exists($this->lock_key_prefix.$k)) apc_delete($this->lock_key_prefix.$k);
+			if (\apc_exists($this->tags_prefix.$k)) apc_delete($this->tags_prefix.$k);
+			if (\apc_exists($this->lock_key_prefix.$k)) apc_delete($this->lock_key_prefix.$k);
 			return apc_delete($this->prefix.$k);
 		}
 	}
