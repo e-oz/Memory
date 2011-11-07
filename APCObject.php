@@ -45,7 +45,10 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		$add = apc_add($this->prefix.$k, $v, intval($ttl));
 		if (!$add)
 		{
-			$this->ReportError('key already exists', __LINE__);
+			if (!apc_exists($this->prefix.$k))
+			{
+				$this->ReportError('Can not add non existing key', __LINE__);
+			}
 			return false;
 		}
 		if (!empty($tags)) $this->set_tags($k, $tags, $ttl);
@@ -157,7 +160,10 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			$data = apc_fetch($this->prefix.$k, $success);
 			if (!$success)
 			{
-				$this->ReportError('apc can not fetch key '.$k.' (or not exists)', __LINE__);
+				if (apc_exists($this->prefix.$k))
+				{
+					$this->ReportError('apc can not fetch key '.$k, __LINE__);
+				}
 				return false;
 			}
 			if ($ttl_left!==-1)
