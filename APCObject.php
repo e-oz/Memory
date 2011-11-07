@@ -18,18 +18,14 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	const apc_arr_atime = 'access_time';
 
 	/**
-	 * @param string $prefix
+	 * @param string $ID
 	 */
-	public function __construct($prefix = '')
+	public function __construct($ID = '')
 	{
-		if (!empty($prefix))
+		if (!empty($ID))
 		{
-			$this->prefix = str_replace('.', '_', $prefix).'.';
+			$this->set_ID($ID);
 		}
-
-		$this->lock_key_prefix        = self::lock_key_prefix.$this->prefix;
-		$this->defragmentation_prefix = self::defragmentation_prefix;
-		$this->tags_prefix            = self::tags_prefix.$this->prefix;
 	}
 
 	/**
@@ -85,7 +81,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 *
 	 * @param string $k
 	 * @param mixed $v
-	 * @param int $ttl           - time to live (store) in seconds
+	 * @param int $ttl		   - time to live (store) in seconds
 	 * @param array|string $tags - array of tags for this key
 	 * @return bool
 	 */
@@ -121,7 +117,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function getKeyTTL($key)
 	{
-		$i    = new \APCIterator('user', '/^'.preg_quote($this->prefix.$key).'$/', APC_ITER_TTL+APC_ITER_CTIME, 1);
+		$i = new \APCIterator('user', '/^'.preg_quote($this->prefix.$key).'$/', APC_ITER_TTL+APC_ITER_CTIME, 1);
 		$item = $i->current();
 		if (empty($item)) $this->ReportError('key '.$key.' not found'.count($i), __LINE__);
 		if ($item[self::apc_arr_ttl]!=0) return (($item[self::apc_arr_ctime]+$item[self::apc_arr_ttl])-time());
@@ -144,12 +140,12 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		}
 		if (is_array($k))
 		{
-			$data       = array();
+			$data = array();
 			$return_ttl = ($ttl_left!==-1 ? true : false);
-			$ttl_left   = array();
+			$ttl_left = array();
 			foreach ($k as $key)
 			{
-				$key        = (string)$key;
+				$key = (string)$key;
 				$data[$key] = apc_fetch($this->prefix.$key, $success);
 				if (!$success)
 				{
@@ -180,8 +176,8 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	public function get_keys()
 	{
 		$map = array();
-		$l   = strlen($this->prefix);
-		$i   = new \APCIterator('user', '/^'.preg_quote($this->prefix).'/', APC_ITER_KEY);
+		$l = strlen($this->prefix);
+		$i = new \APCIterator('user', '/^'.preg_quote($this->prefix).'/', APC_ITER_KEY);
 		foreach ($i as $item)
 		{
 			$map[] = substr($item[self::apc_arr_key], $l);
@@ -230,18 +226,18 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function del_old()
 	{
-		$t             = time();
+		$t = time();
 		$apc_user_info = apc_cache_info('user', true);
-		$apc_ttl       = 0;
+		$apc_ttl = 0;
 		if (!empty($apc_user_info['ttl']))
 		{
-			$apc_ttl      = $apc_user_info['ttl']/2;
+			$apc_ttl = $apc_user_info['ttl']/2;
 			$check_period = $apc_ttl;
 		}
 		if (empty($check_period) || $check_period > 1800) $check_period = 1800;
 
-		$ittl              = new \APCIterator('user', '/^'.preg_quote($this->defragmentation_prefix).'$/', APC_ITER_ATIME, 1);
-		$cttl              = $ittl->current();
+		$ittl = new \APCIterator('user', '/^'.preg_quote($this->defragmentation_prefix).'$/', APC_ITER_ATIME, 1);
+		$cttl = $ittl->current();
 		$previous_cleaning = $cttl[self::apc_arr_atime];
 		if (empty($previous_cleaning) || ($t-$previous_cleaning) > $check_period)
 		{
@@ -279,8 +275,8 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		if (!is_array($tags)) $tags = array($tags);
 
 		$todel = array();
-		$l     = strlen($this->tags_prefix);
-		$i     = new \APCIterator('user', '/^'.preg_quote($this->tags_prefix).'/', APC_ITER_KEY+APC_ITER_VALUE);
+		$l = strlen($this->tags_prefix);
+		$i = new \APCIterator('user', '/^'.preg_quote($this->tags_prefix).'/', APC_ITER_KEY+APC_ITER_VALUE);
 		foreach ($i as $key_tags)
 		{
 			if (is_array($key_tags[self::apc_arr_value]))
@@ -304,12 +300,12 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	public function select_fx($fx, $get_array = false)
 	{
 		$arr = array();
-		$l   = strlen($this->prefix);
-		$i   = new \APCIterator('user', '/^'.preg_quote($this->prefix).'/', APC_ITER_KEY+APC_ITER_VALUE);
+		$l = strlen($this->prefix);
+		$i = new \APCIterator('user', '/^'.preg_quote($this->prefix).'/', APC_ITER_KEY+APC_ITER_VALUE);
 		foreach ($i as $item)
 		{
 			if (!is_array($item[self::apc_arr_value])) continue;
-			$s     = $item[self::apc_arr_value];
+			$s = $item[self::apc_arr_value];
 			$index = substr($item[self::apc_arr_key], $l);
 
 			if ($fx($s, $index)===true)
@@ -326,11 +322,11 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 * Increment value of the key
 	 * @param string $key
 	 * @param mixed $by_value
-	 * if stored value is an array:
-	 *			if $by_value is a value in array, new element will be pushed to the end of array,
-	 *			if $by_value is a key=>value array, new key=>value pair will be added (or updated)
+	 *							  if stored value is an array:
+	 *							  if $by_value is a value in array, new element will be pushed to the end of array,
+	 *							  if $by_value is a key=>value array, new key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
-	 * @param int $ttl              - set time to live for key
+	 * @param int $ttl			  - set time to live for key
 	 * @return int|string|array new value of key
 	 */
 	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200)
@@ -389,7 +385,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		$r = apc_add($this->lock_key_prefix.$key, 1, self::key_lock_time);
 		if (!$r) return false;
-		$auto_unlocker_variable      = new KeyAutoUnlocker(array($this, 'unlock_key'));
+		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
 		return true;
 	}
@@ -417,7 +413,23 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		return array(
 			'system' => apc_cache_info('', true),
-			'user'   => apc_cache_info('user', true)
+			'user' => apc_cache_info('user', true)
 		);
+	}
+
+	public function set_ID($ID)
+	{
+		if (!empty($ID))
+		{
+			$this->prefix = str_replace('.', '_', $ID).'.';
+		}
+		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
+		$this->defragmentation_prefix = self::defragmentation_prefix;
+		$this->tags_prefix = self::tags_prefix.$this->prefix;
+	}
+
+	public function get_ID()
+	{
+		return str_replace('_', '.', trim($this->prefix, '.'));
 	}
 }

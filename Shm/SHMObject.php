@@ -22,54 +22,23 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	const max_ttl = 2592000;
 
 	/**
-	 * @param string $id    path to existing file, __FILE__ usually, will define scope (like prefix).
+	 * @param string $ID	path to existing file, __FILE__ usually, will define scope (like prefix).
 	 * @param integer $size initial size of the memory block in bites
 	 * @param integer $maxsize
 	 */
-	public function __construct($id = '', $size = 0, $maxsize = 0)
+	public function __construct($ID = '', $size = 0, $maxsize = 0)
 	{
-		if (!empty($id)) $this->id = $id;
 		if (!empty($size)) $this->shmsize = $size;
 		if (!empty($maxsize)) $this->max_size = $maxsize;
-
-		//Create Mutex ("multiple read, one write")
-		$this->mutex = new MultiAccess($this->id);
-
-		//Create "shmop" to store data
-		$this->shm_data_key = ftok($this->id, 'D'); //D - Data. But I still love my son Nikita ;)
-		$this->shm_data_id = @shmop_open($this->shm_data_key, "w", 0, 0);
-		if (!$this->shm_data_id)
-		{
-			$this->shm_data_id = @shmop_open($this->shm_data_key, "a", 0, 0);
-			if ($this->shm_data_id!==false) $this->readonly = true;
-		}
-
-		//if memory not yet exists - lets create
-		if (!$this->shm_data_id) $this->shm_data_id = shmop_open($this->shm_data_key, "n", 0777, $this->max_size);
-		if (!$this->shm_data_id)
-		{
-			$this->ReportError('Can not create data segment in shared memory', __LINE__);
-			return false;
-		}
-
-		//Create an mem-object to store the Map
-		$map_id_key       = ftok($this->id, 'h')+12;
-		$this->mem_object = new ShmMem($map_id_key, $this->shmsize, $this->max_size);
-		if (is_object($this->mem_object)) $this->ini = true;
-		else
-		{
-			$this->ReportError('Can not create map', __LINE__);
-			return false;
-		}
-		return $this->ini;
+		$this->set_ID($ID);
 	}
 
 	/**
 	 * Add value to memory storage, only if this key does not exists (or false will be returned).
 	 *
-	 * @param string $k          key
-	 * @param mixed $v           value
-	 * @param integer $ttl       Time To Live in seconds (value will be added to the current time)
+	 * @param string $k		  key
+	 * @param mixed $v		   value
+	 * @param integer $ttl	   Time To Live in seconds (value will be added to the current time)
 	 * @param array|string $tags tag array of tags for this key
 	 * @return bool
 	 */
@@ -80,7 +49,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			$this->ReportError('empty keys and values are not allowed', __LINE__);
 			return false;
 		}
-		$k             = (string)$k;
+		$k = (string)$k;
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
@@ -122,9 +91,9 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k          key
-	 * @param mixed $v           value
-	 * @param integer $ttl       Time To Live in seconds (value will be added to the current time)
+	 * @param string $k		  key
+	 * @param mixed $v		   value
+	 * @param integer $ttl	   Time To Live in seconds (value will be added to the current time)
 	 * @param string|array $tags tag array of tags for this key
 	 * @return bool
 	 */
@@ -136,18 +105,18 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			return false;
 		}
 
-		$k             = (string)$k;
+		$k = (string)$k;
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
 			$this->ReportError('write mutex not acquired', __LINE__);
 			return false;
 		}
-		$map             = $this->mem_object->read('map');
+		$map = $this->mem_object->read('map');
 		$data_serialized = 0;
 		if (!is_scalar($v))
 		{
-			$v               = serialize($v);
+			$v = serialize($v);
 			$data_serialized = 1;
 		}
 		$size = strlen($v);
@@ -170,7 +139,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 				{
 					$this->del($k);
 					$this->del_old();
-					$map   = $this->mem_object->read('map');
+					$map = $this->mem_object->read('map');
 					$start = $this->find_free_space($map, $size);
 					if ($start===false)
 					{
@@ -183,7 +152,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$r = $this->write_data($v, $start);
 		if ($r===false) return false;
 		$set_ttl = 0;
-		$ttl     = intval($ttl);
+		$ttl = intval($ttl);
 		if ($ttl > self::max_ttl) $ttl = self::max_ttl;
 		if ($ttl > 0) $set_ttl = time()+$ttl;
 		$map[$k] = array(self::map_key_start => $start, self::map_key_fin => ($start+$size));
@@ -199,7 +168,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		{
 			if (!is_array($tags)) $tags = array($tags);
 			$tags_was_changed = false;
-			$mem_tags         = $this->mem_object->read('tags');
+			$mem_tags = $this->mem_object->read('tags');
 			foreach ($tags as $tag)
 			{
 				if (empty($mem_tags[$tag]) || !in_array($k, $mem_tags[$tag]))
@@ -226,8 +195,8 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$_end = $this->max_size;
 		usort($map, array($this, 'sort_map'));
 		$imap = array_values($map);
-		$i    = 0;
-		$eoa  = $c-1; //end of array
+		$i = 0;
+		$eoa = $c-1; //end of array
 		if ($imap[0][0] > $size) return 0;
 		for (; $i < $c; $i++)
 		{
@@ -284,9 +253,9 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 
 		if (is_array($k))
 		{
-			$todelete    = array();
+			$todelete = array();
 			$from_points = array();
-			$to_points   = array();
+			$to_points = array();
 			foreach ($k as $key)
 			{
 				$key = (string)$key;
@@ -297,7 +266,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 					continue;
 				}
 				$from_points[] = $map[$key][self::map_key_start];
-				$to_points[]   = $map[$key][self::map_key_fin];
+				$to_points[] = $map[$key][self::map_key_fin];
 			}
 			if (!empty($todelete)) $this->del($todelete);
 			$data = $this->read_data($from_points, $to_points, $k);
@@ -338,7 +307,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			}
 
 			$from = $map[$k][self::map_key_start];
-			$to   = $map[$k][self::map_key_fin];
+			$to = $map[$k][self::map_key_fin];
 			$data = $this->read_data($from, $to);
 			if ($map[$k][self::map_key_serialized]==1) $data = unserialize($data);
 			else
@@ -390,8 +359,8 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	{
 		if (is_array($from) && is_array($to) && !empty($keys))
 		{
-			$i    = 0;
-			$c    = count($from);
+			$i = 0;
+			$c = count($from);
 			$data = array();
 			for (; $i < $c; $i++)
 			{
@@ -456,8 +425,8 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			$this->ReportError('write mutex was not acquired', __LINE__);
 			return false;
 		}
-		$r     = 0;
-		$map   = $this->mem_object->read('map');
+		$r = 0;
+		$map = $this->mem_object->read('map');
 		$todel = array();
 		foreach ($map as $k => &$v)
 		{
@@ -533,9 +502,9 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	 * Increment value of key
 	 * @param string $key
 	 * @param mixed $by_value
-	 * if stored value is array:
-	 *			 if $by_value is value in array, new element will be pushed to the end of array,
-	 *			if $by_value is key=>value array, key=>value pair will be added (or updated)
+	 *							  if stored value is array:
+	 *							  if $by_value is value in array, new element will be pushed to the end of array,
+	 *							  if $by_value is key=>value array, key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
 	 * @param int $ttl
 	 * @return int|string|array new value of key
@@ -584,29 +553,29 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	public function get_stat()
 	{
 		$stat = array();
-		$map  = $this->mem_object->read('map');
+		$map = $this->mem_object->read('map');
 		$size = 0;
 		if (!empty($map)) foreach ($map as $v) $size += ($v[self::map_key_fin]-$v[self::map_key_start]);
 		$stat['size'] = $size;
-		$q_read       = msg_get_queue($this->mutex->getReadQKey());
+		$q_read = msg_get_queue($this->mutex->getReadQKey());
 		if (!empty($q_read))
 		{
-			$q_stat              = msg_stat_queue($q_read);
-			$stat['readers']     = $q_stat['msg_qnum'];
+			$q_stat = msg_stat_queue($q_read);
+			$stat['readers'] = $q_stat['msg_qnum'];
 			$stat['readers_qid'] = $this->mutex->getReadQKey();
 		}
 		$q_writers = msg_get_queue($this->mutex->getWriteQKey());
 		if (!empty($q_writers))
 		{
-			$q_stat              = msg_stat_queue($q_writers);
-			$stat['writers']     = $q_stat['msg_qnum'];
+			$q_stat = msg_stat_queue($q_writers);
+			$stat['writers'] = $q_stat['msg_qnum'];
 			$stat['writers_qid'] = $this->mutex->getWriteQKey();
 		}
-		$stat['shm_key']  = $this->shm_data_key;
-		$stat['shm_id']   = $this->shm_data_id;
+		$stat['shm_key'] = $this->shm_data_key;
+		$stat['shm_id'] = $this->shm_data_id;
 		$stat['max_size'] = $this->max_size;
-		$stat['head']     = $this->mem_object->get_stat();
-		$stat['err_log']  = $this->mutex->getErrLog();
+		$stat['head'] = $this->mem_object->get_stat();
+		$stat['err_log'] = $this->mutex->getErrLog();
 		return $stat;
 	}
 
@@ -625,7 +594,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	{
 		$r = $this->mem_object->add(self::lock_key_prefix.$key, 1, self::key_lock_time);
 		if (!$r) return false;
-		$auto_unlocker_variable      = new \Jamm\Memory\KeyAutoUnlocker(array($this, 'unlock_key'));
+		$auto_unlocker_variable = new \Jamm\Memory\KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
 		return true;
 	}
@@ -644,5 +613,46 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		}
 		$auto_unlocker->revoke();
 		return $this->mem_object->del(self::lock_key_prefix.$auto_unlocker->key);
+	}
+
+	public function set_ID($ID)
+	{
+		if (!empty($ID)) $this->id = $ID;
+
+		//Create Mutex ("multiple read, one write")
+		$this->mutex = new MultiAccess($this->id);
+
+		//Create "shmop" to store data
+		$this->shm_data_key = ftok($this->id, 'D'); //D - Data. But I still love my son Nikita ;)
+		$this->shm_data_id = @shmop_open($this->shm_data_key, "w", 0, 0);
+		if (!$this->shm_data_id)
+		{
+			$this->shm_data_id = @shmop_open($this->shm_data_key, "a", 0, 0);
+			if ($this->shm_data_id!==false) $this->readonly = true;
+		}
+
+		//if memory not yet exists - lets create
+		if (!$this->shm_data_id) $this->shm_data_id = shmop_open($this->shm_data_key, "n", 0777, $this->max_size);
+		if (!$this->shm_data_id)
+		{
+			$this->ReportError('Can not create data segment in shared memory', __LINE__);
+			return false;
+		}
+
+		//Create an mem-object to store the Map
+		$map_id_key = ftok($this->id, 'h')+12;
+		$this->mem_object = new ShmMem($map_id_key, $this->shmsize, $this->max_size);
+		if (!is_object($this->mem_object))
+		{
+			$this->ReportError('Can not create map', __LINE__);
+			return false;
+		}
+
+		return true;
+	}
+
+	public function get_ID()
+	{
+		return $this->id;
 	}
 }

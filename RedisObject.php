@@ -11,14 +11,11 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	protected $tag_prefix;
 	protected $lock_key_prefix;
 
-	public function __construct($prefix = 'K', IRedisServer $RedisServer = NULL)
+	public function __construct($ID = 'K', IRedisServer $RedisServer = NULL)
 	{
-		$this->prefix = str_replace('.', '_', $prefix).'.';
 		if (!empty($RedisServer)) $this->redis = $RedisServer;
 		else $this->setDefaultRedisServer();
-
-		$this->tag_prefix      = self::tag_prefix.$this->prefix;
-		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
+		$this->set_ID($ID);
 	}
 
 	protected function setDefaultRedisServer()
@@ -67,9 +64,9 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k          - key
-	 * @param mixed $v           - value
-	 * @param int $ttl           - time to live (store) in seconds
+	 * @param string $k		  - key
+	 * @param mixed $v		   - value
+	 * @param int $ttl		   - time to live (store) in seconds
 	 * @param array|string $tags - array of tags for this key
 	 * @return bool
 	 */
@@ -111,7 +108,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	{
 		if (!is_array($k)) $k = array($k);
 		$todel = array();
-		$tags  = $this->redis->Keys($this->tag_prefix.'*');
+		$tags = $this->redis->Keys($this->tag_prefix.'*');
 		foreach ($k as $key)
 		{
 			$todel[] = $this->prefix.$key;
@@ -154,8 +151,8 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function select_fx($fx, $get_array = false)
 	{
-		$arr  = array();
-		$l    = strlen($this->prefix);
+		$arr = array();
+		$l = strlen($this->prefix);
 		$keys = $this->redis->Keys($this->prefix.'*');
 		foreach ($keys as $key)
 		{
@@ -177,11 +174,11 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 * Increment value of the key
 	 * @param string $key
 	 * @param mixed $by_value
-	 * if stored value is an array:
-	 *			if $by_value is a value in array, new element will be pushed to the end of array,
-	 *			if $by_value is a key=>value array, new key=>value pair will be added (or updated)
+	 *							  if stored value is an array:
+	 *							  if $by_value is a value in array, new element will be pushed to the end of array,
+	 *							  if $by_value is a key=>value array, new key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
-	 * @param int $ttl              - set time to live for key
+	 * @param int $ttl			  - set time to live for key
 	 * @return int|string|array new value of key
 	 */
 	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200)
@@ -227,7 +224,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		$r = $this->redis->SetNX($this->lock_key_prefix.$key, 1);
 		if (!$r) return false;
 		$this->redis->Expire($this->lock_key_prefix.$key, self::key_lock_time);
-		$auto_unlocker_variable      = new KeyAutoUnlocker(array($this, 'unlock_key'));
+		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
 		return true;
 	}
@@ -259,9 +256,24 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	/** Return array of all stored keys */
 	public function get_keys()
 	{
-		$l    = strlen($this->prefix);
+		$l = strlen($this->prefix);
 		$keys = $this->redis->Keys($this->prefix.'*');
 		foreach ($keys as &$key) $key = substr($key, $l);
 		return $keys;
+	}
+
+	public function set_ID($ID)
+	{
+		if (!empty($ID))
+		{
+			$this->prefix = str_replace('.', '_', $ID).'.';
+		}
+		$this->tag_prefix = self::tag_prefix.$this->prefix;
+		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
+	}
+
+	public function get_ID()
+	{
+		return str_replace('_', '.', trim($this->prefix, '.'));
 	}
 }
