@@ -375,7 +375,10 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			if ($this->save($key, $value, $ttl)) return $value;
 			else return false;
 		}
-		elseif (is_numeric($value) && is_numeric($by_value)) return apc_inc($this->prefix.$key, $by_value);
+		elseif (is_numeric($value) && is_numeric($by_value))
+		{
+			return $this->save($key, $key+$by_value, $ttl);
+		}
 		else
 		{
 			$value .= $by_value;

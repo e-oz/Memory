@@ -124,7 +124,7 @@ class TestMemoryObject extends \Jamm\Tester\ClassTest
 		$this->mem->increment(__METHOD__, 2, 0, 25);
 		$check = $this->mem->read(__METHOD__, $ttl_left);
 		$this->assertEquals($check, 3);
-		$this->assertEquals($ttl_left, 25, 'ttl_left');
+		$this->assertEquals($ttl_left, 25)->addCommentary('ttl_left');
 	}
 
 	public function test_lock_key()
@@ -239,31 +239,31 @@ class TestMemoryObject extends \Jamm\Tester\ClassTest
 		$this->mem->save('key7', array('id' => 0, 'kk1' => 7, 'kk2' => 4));
 
 		$call = $this->mem->select_fx(function($s, $index)
-			{
-				if ($index=='key1' || $s['kk2']==7) return true;
-				else return false;
-			});
+		{
+			if ($index=='key1' || $s['kk2']==7) return true;
+			else return false;
+		});
 		$this->assertEquals($call, array('kk1' => 5, 'kk2' => 7));
 
 		$call = $this->mem->select_fx(function($s, $index)
-			{
-				if ($s['kk1']==$s['kk2']) return true;
-				else return false;
-			});
+		{
+			if ($s['kk1']==$s['kk2']) return true;
+			else return false;
+		});
 		$this->assertEquals($call, array('kk1' => 5, 'kk2' => 5));
 
 		$call = $this->mem->select_fx(function($s, $index)
-			{
-				if ($s['kk1']==$s['kk2'] || $index=='key4') return true;
-				else return false;
-			}, true);
+		{
+			if ($s['kk1']==$s['kk2'] || $index=='key4') return true;
+			else return false;
+		}, true);
 		$this->assertEquals($call, array('key3' => array('kk1' => 5, 'kk2' => 5), 'key4' => array('kk1' => 2, 'kk2' => 4)));
 
 		$call = $this->mem->select_fx(function($s, $index)
-			{
-				if ($s['kk1'] > 7 || ($s['id']==0 && $s['kk2'] < 5)) return true;
-				else return false;
-			}, true);
+		{
+			if ($s['kk1'] > 7 || ($s['id']==0 && $s['kk2'] < 5)) return true;
+			else return false;
+		}, true);
 		$this->assertEquals($call, array('key4' => array('kk1' => 2, 'kk2' => 4), 'key6' => array('id' => 1, 'kk1' => 9, 'kk2' => 5), 'key7' => array('id' => 0, 'kk1' => 7, 'kk2' => 4)));
 	}
 
@@ -288,7 +288,7 @@ class TestMemoryObject extends \Jamm\Tester\ClassTest
 		$this->mem->save(__METHOD__.':1', 1);
 		$this->mem->save(__METHOD__.':2', 1);
 		$this->mem->save(__METHOD__.':3', 1);
-		$arr  = array(__METHOD__.':1', __METHOD__.':2', __METHOD__.':3');
+		$arr = array(__METHOD__.':1', __METHOD__.':2', __METHOD__.':3');
 		$call = $this->mem->get_keys();
 		if (is_array($call)) $c = count($call);
 		else $c = 0;
