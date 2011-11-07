@@ -12,6 +12,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	protected $keys_list;
 	protected $tag_prefix;
 	protected $lock_key_prefix;
+	protected $optimize_select_fx = false;
 
 	public function __construct($ID = '', IRedisServer $RedisServer = NULL)
 	{
