@@ -96,7 +96,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		static $cleaned = false;
 		if (!$cleaned)
 		{
-			$this->del_old();
+			$this->del_old_cached();
 			$cleaned = true;
 		}
 
@@ -230,8 +230,37 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	public function del_old()
 	{
 		$t = time();
+		$todel = array();
 		$apc_user_info = apc_cache_info('user', true);
 		$apc_ttl = 0;
+		if (!empty($apc_user_info['ttl']))
+		{
+			$apc_ttl = $apc_user_info['ttl']/2;
+		}
+
+		$i = new \APCIterator('user', null, APC_ITER_TTL+APC_ITER_KEY+APC_ITER_CTIME+APC_ITER_ATIME);
+		foreach ($i as $key)
+		{
+			if ($key[self::apc_arr_ttl] > 0 && ($t-$key[self::apc_arr_ctime]) > $key[self::apc_arr_ttl]) $todel[] = $key[self::apc_arr_key];
+			else
+			{
+				//this code is necessary to prevent deletion variables from cache by apc.ttl (they deletes not by their ttl+ctime, but apc.ttl+atime)
+				if ($apc_ttl > 0 && (($t-$key[self::apc_arr_atime]) > $apc_ttl)) apc_fetch($key[self::apc_arr_key]);
+			}
+		}
+		if (!empty($todel))
+		{
+			$r = apc_delete($todel);
+			if (!empty($r)) return $r;
+			else return true;
+		}
+		return true;
+	}
+
+	protected function del_old_cached()
+	{
+		$t = time();
+		$apc_user_info = apc_cache_info('user', true);
 		if (!empty($apc_user_info['ttl']))
 		{
 			$apc_ttl = $apc_user_info['ttl']/2;
@@ -245,24 +274,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		if (empty($previous_cleaning) || ($t-$previous_cleaning) > $check_period)
 		{
 			apc_store($this->defragmentation_prefix, $t, $check_period);
-			$todel = array();
-
-			$i = new \APCIterator('user', null, APC_ITER_TTL+APC_ITER_KEY+APC_ITER_CTIME+APC_ITER_ATIME);
-			foreach ($i as $key)
-			{
-				if ($key[self::apc_arr_ttl] > 0 && ($t-$key[self::apc_arr_ctime]) > $key[self::apc_arr_ttl]) $todel[] = $key[self::apc_arr_key];
-				else
-				{
-					//this code is necessary to prevent deletion variables from cache by apc.ttl (they deletes not by their ttl+ctime, but apc.ttl+atime)
-					if ($apc_ttl > 0 && (($t-$key[self::apc_arr_atime]) > $apc_ttl)) apc_fetch($key[self::apc_arr_key]);
-				}
-			}
-			if (!empty($todel))
-			{
-				$r = apc_delete($todel);
-				if (!empty($r)) return $r;
-				else return true;
-			}
+			$this->del_old();
 		}
 		return true;
 	}
