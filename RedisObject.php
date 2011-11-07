@@ -3,11 +3,13 @@ namespace Jamm\Memory;
 
 class RedisObject extends MemoryObject implements IMemoryStorage
 {
+	const keys_list       = '.k.';
 	const lock_key_prefix = '.lock_key.';
-	const tag_prefix = '.tag.';
+	const tag_prefix      = '.tag.';
 	/** @var IRedisServer */
-	protected $redis = 'K';
-	protected $prefix;
+	protected $redis;
+	protected $prefix = 'K';
+	protected $keys_list;
 	protected $tag_prefix;
 	protected $lock_key_prefix;
 
@@ -26,21 +28,22 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Add value to the memory storage, only if this key does not exists (or false will be returned).
 	 *
-	 * @param string $k
-	 * @param mixed $v
+	 * @param string $key
+	 * @param mixed $value
 	 * @param int $ttl
 	 * @param array|string $tags
 	 * @return boolean
 	 */
-	public function add($k, $v, $ttl = 259200, $tags = NULL)
+	public function add($key, $value, $ttl = 259200, $tags = NULL)
 	{
-		$key = $this->prefix.$k;
-		$set = $this->redis->SetNX($key, serialize($v));
+		$redis_key = $this->prefix.$key;
+		$set       = $this->redis->SetNX($redis_key, serialize($value));
 		if (!$set) return false;
 		$ttl = intval($ttl);
 		if ($ttl < 1) $ttl = self::max_ttl;
-		$this->redis->Expire($key, $ttl);
-		if (!empty($tags)) $this->setTags($k, $tags);
+		$this->redis->Expire($redis_key, $ttl);
+		if (!empty($tags)) $this->setTags($key, $tags);
+		$this->redis->rpush($this->keys_list, $key);
 		return true;
 	}
 
@@ -56,7 +59,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		if (!is_array($tags)) $tags = array($tags);
 		foreach ($tags as $tag)
 		{
-			if (!$this->redis->sAdd($this->tag_prefix.$tag, $key)) return false;
+			$this->redis->sAdd($this->tag_prefix.$tag, $key);
 		}
 		return true;
 	}
@@ -64,55 +67,58 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k		  - key
-	 * @param mixed $v		   - value
-	 * @param int $ttl		   - time to live (store) in seconds
-	 * @param array|string $tags - array of tags for this key
+	 * @param string $key			key
+	 * @param mixed $v				value
+	 * @param int $ttl				time to live (store) in seconds
+	 * @param array|string $tags	 array of tags for this key
 	 * @return bool
 	 */
-	public function save($k, $v, $ttl = 259200, $tags = NULL)
+	public function save($key, $v, $ttl = 259200, $tags = NULL)
 	{
 		$ttl = intval($ttl);
 		if ($ttl < 1) $ttl = self::max_ttl;
-		$set = $this->redis->SetEX($this->prefix.$k, $ttl, serialize($v));
+		$set = $this->redis->SetEX($this->prefix.$key, $ttl, serialize($v));
 		if (!$set) return false;
-		if (!empty($tags)) $this->setTags($k, $tags);
+		if (!empty($tags)) $this->setTags($key, $tags);
+		$this->redis->rpush($this->keys_list, $key);
 		return true;
 	}
 
 	/**
 	 * Read data from memory storage
 	 *
-	 * @param string|array $k (string or array of string keys)
+	 * @param string|array $key (string or array of string keys)
 	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
 	 * @return mixed
 	 */
-	public function read($k, &$ttl_left = -1)
+	public function read($key, &$ttl_left = -1)
 	{
-		$r = unserialize($this->redis->get($this->prefix.$k));
-		if ($r===false) return false;
+		$stored_value = $this->redis->get($this->prefix.$key);
+		if (empty($stored_value)) return NULL;
+		$r = unserialize($stored_value);
 		if ($ttl_left!==-1)
 		{
-			$ttl_left = $this->redis->TTL($this->prefix.$k);
+			$ttl_left = $this->redis->TTL($this->prefix.$key);
 			if ($ttl_left < 1) $ttl_left = self::max_ttl;
 		}
 		return $r;
 	}
 
 	/**
-	 * Delete key or array of keys from storage
-	 * @param string|array $k - keys
+	 * Delete key or array of keys from the storage
+	 * @param string|array $key - keys
 	 * @return boolean|array - if array of keys was passed, on error will be returned array of not deleted keys, or 'true' on success.
 	 */
-	public function del($k)
+	public function del($key)
 	{
-		if (!is_array($k)) $k = array($k);
+		if (!is_array($key)) $key = array($key);
 		$todel = array();
-		$tags = $this->redis->Keys($this->tag_prefix.'*');
-		foreach ($k as $key)
+		$tags  = $this->redis->Keys($this->tag_prefix.'*');
+		foreach ($key as $next_key)
 		{
-			$todel[] = $this->prefix.$key;
-			foreach ($tags as $tag) $this->redis->sRem($tag, $key);
+			$todel[] = $this->prefix.$next_key;
+			foreach ($tags as $tag) $this->redis->sRem($tag, $next_key);
+			$this->redis->LRem($this->keys_list, 0, $next_key);
 		}
 		return $this->redis->Del($todel);
 	}
@@ -144,30 +150,32 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 
 	/**
 	 * Select from storage via callback function
-	 * Only values of 'array' type will be selected
-	 * @param callback $fx ($value_array,$key)
+	 * @param callback $fx ($value, $key)
 	 * @param bool $get_array
 	 * @return mixed
 	 */
 	public function select_fx($fx, $get_array = false)
 	{
-		$arr = array();
-		$l = strlen($this->prefix);
-		$keys = $this->redis->Keys($this->prefix.'*');
-		foreach ($keys as $key)
-		{
-			$s = unserialize($this->redis->Get($key));
-			if (!is_array($s)) continue;
-			$index = substr($key, $l);
+		$keys_count = $this->redis->LLen($this->keys_list);
+		if (empty($keys_count)) return NULL;
+		$data = array();
 
-			if ($fx($s, $index)===true)
+		for ($i = 0; $i < $keys_count; $i++)
+		{
+			$key = $this->redis->LIndex($this->keys_list, $i);
+			if (empty($key)) continue;
+			$value = $this->redis->Get($this->prefix.$key);
+			if (empty($value)) continue;
+			$content = unserialize($value);
+
+			if ($fx($content, $key)===true)
 			{
-				if (!$get_array) return $s;
-				else $arr[$index] = $s;
+				if (!$get_array) return $content;
+				else $data[$key] = $content;
 			}
 		}
-		if (!$get_array || empty($arr)) return false;
-		else return $arr;
+		if (!$get_array || empty($data)) return false;
+		else return $data;
 	}
 
 	/**
@@ -224,7 +232,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		$r = $this->redis->SetNX($this->lock_key_prefix.$key, 1);
 		if (!$r) return false;
 		$this->redis->Expire($this->lock_key_prefix.$key, self::key_lock_time);
-		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
+		$auto_unlocker_variable      = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->key = $key;
 		return true;
 	}
@@ -256,7 +264,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	/** Return array of all stored keys */
 	public function get_keys()
 	{
-		$l = strlen($this->prefix);
+		$l    = strlen($this->prefix);
 		$keys = $this->redis->Keys($this->prefix.'*');
 		foreach ($keys as &$key) $key = substr($key, $l);
 		return $keys;
@@ -268,7 +276,8 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		{
 			$this->prefix = str_replace('.', '_', $ID).'.';
 		}
-		$this->tag_prefix = self::tag_prefix.$this->prefix;
+		$this->keys_list       = self::keys_list;
+		$this->tag_prefix      = self::tag_prefix.$this->prefix;
 		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
 	}
 
