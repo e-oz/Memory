@@ -49,14 +49,14 @@ class RedisServer implements IRedisServer
 
 	public function getLastErr()
 	{
-		$t              = $this->last_err;
+		$t = $this->last_err;
 		$this->last_err = '';
 		return $t;
 	}
 
 	public function ReportError($msg, $line)
 	{
-		$this->last_err  = $line.': '.$msg;
+		$this->last_err = $line.': '.$msg;
 		$this->err_log[] = $line.': '.$msg;
 		return false;
 	}
@@ -101,7 +101,7 @@ class RedisServer implements IRedisServer
 
 	public function read_reply()
 	{
-		$reply    = trim(fgets($this->connection));
+		$reply = trim(fgets($this->connection));
 		$response = null;
 
 		/**
@@ -125,7 +125,7 @@ class RedisServer implements IRedisServer
 				if ($reply=='$-1') return null;
 				$read = 0;
 				$size = intval(substr($reply, 1));
-				$chi  = 0;
+				$chi = 0;
 				if ($size > 0)
 				{
 					do
@@ -199,11 +199,11 @@ class RedisServer implements IRedisServer
 	/**
 	 * Returns all keys matching pattern.
 	 * @param string $pattern
-	 *  Supported glob-style patterns:
+	 *   Supported glob-style patterns:
 	 *   h?llo matches hello, hallo and hxllo
 	 *   h*llo matches hllo and heeeello
 	 *   h[ae]llo matches hello and hallo, but not hillo
-	 *  Use \ to escape special characters if you want to match them verbatim.
+	 *   Use \ to escape special characters if you want to match them verbatim.
 	 * @return array
 	 */
 	public function Keys($pattern)
@@ -257,8 +257,8 @@ class RedisServer implements IRedisServer
 	public function hGetAll($key)
 	{
 		$arr = $this->send_command('hgetall', $key);
-		$c   = count($arr);
-		$r   = array();
+		$c = count($arr);
+		$r = array();
 		for ($i = 0; $i < $c; $i += 2)
 		{
 			$r[$arr[$i]] = $arr[$i+1];
@@ -303,7 +303,7 @@ class RedisServer implements IRedisServer
 	{
 		$args = func_get_args();
 		array_unshift($args, 'watch');
-		return call_user_func_array(array($this, 'send_command'), $args);
+		return $this->_send($args);
 	}
 
 	/**
@@ -915,7 +915,7 @@ class RedisServer implements IRedisServer
 	/**
 	 * Set multiple keys to multiple values, only if none of the keys exist
 	 * @param array $keys (key => value)
-	 * Returns:
+	 *					Returns:
 	 * 1 if the all the keys were set.
 	 * 0 if no key was set (at least one key already existed).
 	 * @return int
@@ -1217,7 +1217,7 @@ class RedisServer implements IRedisServer
 	 * @link http://redis.io/commands/sort
 	 * @param string $key
 	 * @param string $sort_rule [BY pattern] [LIMIT offset count] [GET pattern [GET pattern ...]] [ASC|DESC] [ALPHA] [STORE destination]
-	 * Returns list of sorted elements.
+	 *						  Returns list of sorted elements.
 	 * @return array
 	 */
 	public function Sort($key, $sort_rule)
@@ -1367,7 +1367,7 @@ class RedisServer implements IRedisServer
 	 * @param array $keys
 	 * @param array|null $weights
 	 * @param string|null $aggregate see Aggregate* constants
-	 * Returns the number of elements in the resulting sorted set at destination.
+	 *							   Returns the number of elements in the resulting sorted set at destination.
 	 * @return int
 	 */
 	public function zInterStore($destination, array $keys, array $weights = null, $aggregate = null)
@@ -1377,7 +1377,7 @@ class RedisServer implements IRedisServer
 		if (!empty($weights))
 		{
 			$destination[] = 'WEIGHTS';
-			$destination   = array_merge($destination, $weights);
+			$destination = array_merge($destination, $weights);
 		}
 		if (!empty($aggregate))
 		{
@@ -1557,7 +1557,7 @@ class RedisServer implements IRedisServer
 		if (!empty($weights))
 		{
 			$destination[] = 'WEIGHTS';
-			$destination   = array_merge($destination, $weights);
+			$destination = array_merge($destination, $weights);
 		}
 		if (!empty($aggregate))
 		{
