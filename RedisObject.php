@@ -4,7 +4,7 @@ namespace Jamm\Memory;
 class RedisObject extends MemoryObject implements IMemoryStorage
 {
 	const lock_key_prefix = '.lock_key.';
-	const tag_prefix      = '.tag.';
+	const tag_prefix = '.tag.';
 	/** @var IRedisServer */
 	protected $redis;
 	protected $prefix = 'K';
@@ -35,7 +35,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	public function add($key, $value, $ttl = 259200, $tags = NULL)
 	{
 		$redis_key = $this->prefix.$key;
-		$set       = $this->redis->SetNX($redis_key, serialize($value));
+		$set = $this->redis->SetNX($redis_key, serialize($value));
 		if (!$set) return false;
 		$ttl = intval($ttl);
 		if ($ttl < 1) $ttl = self::max_ttl;
@@ -64,10 +64,10 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $key		  - key
+	 * @param string $key			- key
 	 * @param mixed $value		   - value
-	 * @param int $ttl		   - time to live (store) in seconds
-	 * @param array|string $tags - array of tags for this key
+	 * @param int $ttl			   - time to live (store) in seconds
+	 * @param array|string $tags	 - array of tags for this key
 	 * @return bool
 	 */
 	public function save($key, $value, $ttl = 259200, $tags = NULL)
@@ -84,7 +84,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 * Read data from memory storage
 	 *
 	 * @param string|array $key (string or array of string keys)
-	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
+	 * @param mixed $ttl_left   = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
 	 * @return mixed
 	 */
 	public function read($key, &$ttl_left = -1)
@@ -108,7 +108,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	{
 		if (!is_array($keys)) $keys = array($keys);
 		$todel = array();
-		$tags  = $this->redis->Keys($this->tag_prefix.'*');
+		$tags = $this->redis->Keys($this->tag_prefix.'*');
 		foreach ($keys as $key)
 		{
 			$todel[] = $this->prefix.$key;
@@ -150,9 +150,9 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function select_fx($fx, $get_array = false)
 	{
-		$arr           = array();
+		$arr = array();
 		$prefix_length = strlen($this->prefix);
-		$keys          = $this->redis->Keys($this->prefix.'*');
+		$keys = $this->redis->Keys($this->prefix.'*');
 		foreach ($keys as $key)
 		{
 			$content = $this->redis->Get($key);
@@ -223,8 +223,8 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		$r = $this->redis->SetNX($this->lock_key_prefix.$key, 1);
 		if (!$r) return false;
 		$this->redis->Expire($this->lock_key_prefix.$key, self::key_lock_time);
-		$auto_unlocker_variable      = new KeyAutoUnlocker(array($this, 'unlock_key'));
-		$auto_unlocker_variable->key = $key;
+		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
+		$auto_unlocker_variable->setKey($key);
 		return true;
 	}
 
@@ -235,13 +235,14 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function unlock_key(KeyAutoUnlocker $auto_unlocker)
 	{
-		if (empty($auto_unlocker->key))
+		$key = $auto_unlocker->getKey();
+		if (empty($key))
 		{
 			$this->ReportError('autoUnlocker should be passed', __LINE__);
 			return false;
 		}
 		$auto_unlocker->revoke();
-		return $this->redis->Del($this->lock_key_prefix.$auto_unlocker->key);
+		return $this->redis->Del($this->lock_key_prefix.$key);
 	}
 
 	/**
@@ -255,7 +256,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	/** Return array of all stored keys */
 	public function get_keys()
 	{
-		$l    = strlen($this->prefix);
+		$l = strlen($this->prefix);
 		$keys = $this->redis->Keys($this->prefix.'*');
 		foreach ($keys as &$key) $key = substr($key, $l);
 		return $keys;
@@ -267,7 +268,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		{
 			$this->prefix = str_replace('.', '_', $ID).'.';
 		}
-		$this->tag_prefix      = self::tag_prefix.$this->prefix;
+		$this->tag_prefix = self::tag_prefix.$this->prefix;
 		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
 	}
 

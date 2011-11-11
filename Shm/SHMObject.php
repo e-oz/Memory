@@ -595,7 +595,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$r = $this->mem_object->add(self::lock_key_prefix.$key, 1, self::key_lock_time);
 		if (!$r) return false;
 		$auto_unlocker_variable = new \Jamm\Memory\KeyAutoUnlocker(array($this, 'unlock_key'));
-		$auto_unlocker_variable->key = $key;
+		$auto_unlocker_variable->setKey($key);
 		return true;
 	}
 
@@ -606,13 +606,14 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	 */
 	public function unlock_key(\Jamm\Memory\KeyAutoUnlocker $auto_unlocker)
 	{
-		if (empty($auto_unlocker->key))
+		$key = $auto_unlocker->getKey();
+		if (empty($key))
 		{
 			$this->ReportError('autoUnlocker should be passed', __LINE__);
 			return false;
 		}
 		$auto_unlocker->revoke();
-		return $this->mem_object->del(self::lock_key_prefix.$auto_unlocker->key);
+		return $this->mem_object->del(self::lock_key_prefix.$key);
 	}
 
 	public function set_ID($ID)

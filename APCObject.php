@@ -409,7 +409,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		$r = apc_add($this->lock_key_prefix.$key, 1, self::key_lock_time);
 		if (!$r) return false;
 		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
-		$auto_unlocker_variable->key = $key;
+		$auto_unlocker_variable->setKey($key);
 		return true;
 	}
 
@@ -420,13 +420,14 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function unlock_key(KeyAutoUnlocker $auto_unlocker)
 	{
-		if (empty($auto_unlocker->key))
+		$key = $auto_unlocker->getKey();
+		if (empty($key))
 		{
 			$this->ReportError('autoUnlocker should be passed', __LINE__);
 			return false;
 		}
 		$auto_unlocker->revoke();
-		return apc_delete($this->lock_key_prefix.$auto_unlocker->key);
+		return apc_delete($this->lock_key_prefix.$key);
 	}
 
 	/**
