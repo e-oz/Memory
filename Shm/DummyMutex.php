@@ -10,9 +10,9 @@ class DummyMutex implements IMutex
 	public function get_access_write(&$auto_unlocker_reference)
 	{ return true; }
 
-	public function release_access_read(IRevokable $autoUnlocker = NULL)
+	public function release_access_read(\Jamm\Memory\IKeyLocker $autoUnlocker = NULL)
 	{ return true; }
 
-	public function release_access_write(IRevokable $autoUnlocker = NULL)
+	public function release_access_write(\Jamm\Memory\IKeyLocker $autoUnlocker = NULL)
 	{ return true; }
 }

@@ -1,16 +1,6 @@
 <?php
 namespace Jamm\Memory\Shm;
-
-interface IMutex
-{
-	public function get_access_read(&$auto_unlocker_reference);
-
-	public function release_access_read(IRevokable $autoUnlocker = NULL);
-
-	public function get_access_write(&$auto_unlocker_reference);
-
-	public function release_access_write(IRevokable $autoUnlocker = NULL);
-}
+use Jamm\Memory\IKeyLocker;
 
 class MultiAccess implements IMutex
 {
@@ -39,12 +29,12 @@ class MultiAccess implements IMutex
 			if (!$sent) return false;
 		}
 
-		$auto_unlocker_reference = new autoUnlocker(array($this, 'release_access_read'));
+		$auto_unlocker_reference = new \Jamm\Memory\KeyAutoUnlocker(array($this, 'release_access_read'));
 		$this->readers_count++;
 		return true;
 	}
 
-	public function release_access_read(IRevokable $autoUnlocker = NULL)
+	public function release_access_read(IKeyLocker $autoUnlocker = NULL)
 	{
 		if (!empty($autoUnlocker)) $autoUnlocker->revoke();
 		if ($this->readers_count > 0) $this->readers_count--;
@@ -86,13 +76,13 @@ class MultiAccess implements IMutex
 			}
 		}
 
-		$auto_unlocker_reference = new autoUnlocker(array($this, 'release_access_write'));
+		$auto_unlocker_reference = new \Jamm\Memory\KeyAutoUnlocker(array($this, 'release_access_write'));
 		$this->writers_count++;
 		//and now we can write :)
 		return true;
 	}
 
-	public function release_access_write(IRevokable $autoUnlocker = NULL)
+	public function release_access_write(IKeyLocker $autoUnlocker = NULL)
 	{
 		if (!empty($autoUnlocker)) $autoUnlocker->revoke();
 		if ($this->writers_count > 0) $this->writers_count--;
@@ -144,7 +134,7 @@ class MultiAccess implements IMutex
 
 	protected function clean_queue($type = self::writers)
 	{
-		$q    = $this->select_q($type);
+		$q = $this->select_q($type);
 		$stat = msg_stat_queue($q);
 		if ($stat['msg_qnum'] > 0)
 		{
@@ -162,7 +152,7 @@ class MultiAccess implements IMutex
 		$sent = msg_send($q, $type, $type, false, false, $err);
 		if ($sent==false)
 		{
-			$counter         = $this->get_counter($type);
+			$counter = $this->get_counter($type);
 			$this->err_log[] = 'Message was not sent to queue '.($type==self::readers ? 'readers '.$this->read_q_key
 					: 'writers '.$this->write_q_key)
 					.' counter: '.$counter.', error: '.$err;
@@ -192,7 +182,7 @@ class MultiAccess implements IMutex
 
 	public function get_counter($type = self::writers)
 	{
-		$q    = $this->select_q($type);
+		$q = $this->select_q($type);
 		$stat = msg_stat_queue($q);
 		return $stat['msg_qnum'];
 	}
@@ -258,7 +248,7 @@ class MultiAccess implements IMutex
 	{
 		if ($this->writers_count > 0)
 		{
-			$this->err_log[]     = 'writers count = '.$this->writers_count;
+			$this->err_log[] = 'writers count = '.$this->writers_count;
 			$this->writers_count = 0;
 			$this->release_access_write();
 		}
@@ -266,7 +256,7 @@ class MultiAccess implements IMutex
 
 		if ($this->readers_count > 0)
 		{
-			$this->err_log[]     = 'readers count = '.$this->readers_count;
+			$this->err_log[] = 'readers count = '.$this->readers_count;
 			$this->readers_count = 0;
 			$this->release_access_read();
 		}
@@ -289,37 +279,4 @@ class MultiAccess implements IMutex
 	public function setMaxWaitTime($max_wait_time)
 	{ $this->max_wait_time = floatval($max_wait_time); }
 
-}
-
-interface IRevokable
-{
-	function revoke();
-}
-
-/** thanks to authors of RAII! */
-class autoUnlocker implements IRevokable
-{
-	protected $Unlock = NULL;
-
-	/**
-	 * Register function to auto-unlock mutex
-	 * @param callback $Unlock
-	 */
-	public function __construct($Unlock)
-	{
-		if (is_callable($Unlock)) $this->Unlock = $Unlock;
-		else trigger_error('Not callable parameter given', E_USER_WARNING);
-	}
-
-	/** Revoke auto-unlocking (if mutex unlocked was "manually") */
-	public function revoke()
-	{
-		$this->Unlock = NULL;
-	}
-
-	/** Unlock mutex automatically */
-	public function __destruct()
-	{
-		if (isset($this->Unlock)) call_user_func($this->Unlock, $this);
-	}
 }

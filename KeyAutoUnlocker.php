@@ -1,7 +1,8 @@
 <?php
 namespace Jamm\Memory;
 
-class KeyAutoUnlocker
+/** thanks to authors of RAII! */
+class KeyAutoUnlocker implements IKeyLocker
 {
 	protected $key = '';
 	protected $Unlock = NULL;
