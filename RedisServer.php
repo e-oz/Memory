@@ -48,6 +48,7 @@ class RedisServer implements IRedisServer
 	{
 		$socket = fsockopen($host, $port, $errno, $errstr);
 		if (!$socket) return $this->ReportError('Connection error: '.$errno.':'.$errstr, __LINE__);
+		stream_set_timeout($socket, 2592000);
 		return $socket;
 	}
 
