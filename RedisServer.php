@@ -34,9 +34,13 @@ class RedisServer implements IRedisServer
 	protected $connection;
 	protected $last_err;
 	protected $err_log;
+	private $host = 'localhost';
+	private $port = 6379;
 
 	public function __construct($host = 'localhost', $port = '6379')
 	{
+		$this->host = $host;
+		$this->port = $port;
 		$this->connection = $this->connect($host, $port);
 	}
 
@@ -88,7 +92,15 @@ class RedisServer implements IRedisServer
 		foreach ($args as $arg) $command .= "$".strlen($arg)."\r\n".$arg."\r\n";
 
 		$w = fwrite($this->connection, $command);
-		if (!$w) return $this->ReportError('command was not sent', __LINE__);
+		if (!$w)
+		{
+			//if connection was lost
+			$this->connect($this->host, $this->port);
+			if (!fwrite($this->connection, $command))
+			{
+				return $this->ReportError('command was not sent', __LINE__);
+			}
+		}
 		return $this->read_reply();
 	}
 
