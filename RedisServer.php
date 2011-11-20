@@ -41,12 +41,13 @@ class RedisServer implements IRedisServer
 	{
 		$this->host = $host;
 		$this->port = $port;
-		$this->connection = $this->connect($host, $port);
+		$this->connect($host, $port);
 	}
 
 	public function connect($host, $port)
 	{
-		$socket = fsockopen($host, $port, $errno, $errstr);
+		if (!empty($this->connection)) fclose($this->connection);
+		$this->connection = $socket = fsockopen($host, $port, $errno, $errstr);
 		if (!$socket) return $this->ReportError('Connection error: '.$errno.':'.$errstr, __LINE__);
 		stream_set_timeout($socket, 2592000);
 		return $socket;
