@@ -112,7 +112,10 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		foreach ($keys as $key)
 		{
 			$todel[] = $this->prefix.$key;
-			foreach ($tags as $tag) $this->redis->sRem($tag, $key);
+			if (!empty($tags))
+			{
+				foreach ($tags as $tag) $this->redis->sRem($tag, $key);
+			}
 		}
 		return $this->redis->Del($todel);
 	}
