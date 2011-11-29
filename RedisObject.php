@@ -4,7 +4,7 @@ namespace Jamm\Memory;
 class RedisObject extends MemoryObject implements IMemoryStorage
 {
 	const lock_key_prefix = '.lock_key.';
-	const tag_prefix = '.tag.';
+	const tag_prefix      = '.tag.';
 	/** @var IRedisServer */
 	protected $redis;
 	protected $prefix = 'K';
@@ -35,7 +35,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	public function add($key, $value, $ttl = 259200, $tags = NULL)
 	{
 		$redis_key = $this->prefix.$key;
-		$set = $this->redis->SetNX($redis_key, serialize($value));
+		$set       = $this->redis->SetNX($redis_key, serialize($value));
 		if (!$set) return false;
 		$ttl = intval($ttl);
 		if ($ttl < 1) $ttl = self::max_ttl;
@@ -108,7 +108,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	{
 		if (!is_array($keys)) $keys = array($keys);
 		$todel = array();
-		$tags = $this->redis->Keys($this->tag_prefix.'*');
+		$tags  = $this->redis->Keys($this->tag_prefix.'*');
 		foreach ($keys as $key)
 		{
 			$todel[] = $this->prefix.$key;
@@ -153,9 +153,9 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function select_fx($fx, $get_array = false)
 	{
-		$arr = array();
+		$arr           = array();
 		$prefix_length = strlen($this->prefix);
-		$keys = $this->redis->Keys($this->prefix.'*');
+		$keys          = $this->redis->Keys($this->prefix.'*');
 		foreach ($keys as $key)
 		{
 			$content = $this->redis->Get($key);
@@ -196,20 +196,18 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		$value = $this->read($key);
 		if ($value===null || $value===false) return $this->save($key, $by_value, $ttl);
 
-		if (is_numeric($value)) $value += $by_value;
-		elseif (is_array($value))
+		if (is_array($value))
 		{
-			if ($limit_keys_count > 0 && (count($value) > $limit_keys_count)) $value = array_slice($value, $limit_keys_count*(-1)+1);
-
-			if (is_array($by_value))
-			{
-				$set_key = key($by_value);
-				if (!empty($set_key)) $value[$set_key] = $by_value[$set_key];
-				else $value[] = $by_value[0];
-			}
-			else $value[] = $by_value;
+			$value = $this->incrementArray($limit_keys_count, $value, $by_value, $key, $ttl);
 		}
-		else $value .= $by_value;
+		elseif (is_numeric($value))
+		{
+			$value += $by_value;
+		}
+		else
+		{
+			$value .= $by_value;
+		}
 
 		if ($this->save($key, $value, $ttl)) return $value;
 		else return false;
@@ -259,10 +257,14 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	/** Return array of all stored keys */
 	public function get_keys()
 	{
-		$l = strlen($this->prefix);
+		$l    = strlen($this->prefix);
 		$keys = $this->redis->Keys($this->prefix.'*');
-		foreach ($keys as &$key) $key = substr($key, $l);
-		return $keys;
+		if (!empty($keys))
+		{
+			foreach ($keys as &$key) $key = substr($key, $l);
+			return $keys;
+		}
+		else return array();
 	}
 
 	public function set_ID($ID)
@@ -271,7 +273,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		{
 			$this->prefix = str_replace('.', '_', $ID).'.';
 		}
-		$this->tag_prefix = self::tag_prefix.$this->prefix;
+		$this->tag_prefix      = self::tag_prefix.$this->prefix;
 		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
 	}
 

@@ -327,16 +327,9 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		$value = $this->mem[self::map_keys][$key];
 		if (is_array($value))
 		{
-			if ($limit_keys_count > 0 && (count($value) > $limit_keys_count)) $value = array_slice($value, $limit_keys_count*(-1)+1);
-			if (is_array($by_value))
-			{
-				$set_key = key($by_value);
-				if (!empty($set_key)) $value[$set_key] = $by_value[$set_key];
-				else $value[] = $by_value[0];
-			}
-			else $value[] = $by_value;
+			$value = $this->incrementArray($limit_keys_count, $value, $by_value, $key, $ttl);
 		}
-		elseif (is_numeric($value) && is_numeric($by_value))
+		elseif (is_numeric($value))
 		{
 			$value += $by_value;
 		}

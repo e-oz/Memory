@@ -13,8 +13,8 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	/** @var IMemcacheDecorator */
 	protected $memcache;
 
-	const lock_key_prefix = '.lock_key.';
-	const ttl_table_prefix = '.ttl.';
+	const lock_key_prefix   = '.lock_key.';
+	const ttl_table_prefix  = '.ttl.';
 	const tags_table_prefix = '.tags.';
 
 	/**
@@ -66,7 +66,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		$ttl_table = $this->read_TTL_table();
+		$ttl_table     = $this->read_TTL_table();
 		$ttl_table[$k] = $ttl;
 		$this->save_TTL_table($ttl_table);
 
@@ -106,7 +106,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		if (empty($tags_table)) $tags_table = array();
 		$tags_table_changed = false;
 
-		$ttl_table = $this->read_TTL_table();
+		$ttl_table         = $this->read_TTL_table();
 		$ttl_table_changed = false;
 
 		$r = true;
@@ -118,37 +118,41 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 				$k = (string)$k;
 				$this->memcache->delete($this->prefix.$k);
 				$this->memcache->delete($this->lock_key_prefix.$k);
-				if (array_key_exists($k, $tags_table))
-				{
-					unset($tags_table[$k]);
-					$tags_table_changed = true;
-				}
-				if (array_key_exists($k, $ttl_table))
-				{
-					unset($ttl_table[$k]);
-					$ttl_table_changed = true;
-				}
+				if ($this->delTagsOfKey($k, $tags_table)) $tags_table_changed = true;
+				if ($this->delTTLOfKey($k, $ttl_table)) $ttl_table_changed = true;
 			}
 		}
 		else
 		{
 			$r = $this->memcache->delete($this->prefix.$key);
-			if (array_key_exists($key, $tags_table))
-			{
-				unset($tags_table[$key]);
-				$tags_table_changed = true;
-			}
-			if (array_key_exists($key, $ttl_table))
-			{
-				unset($ttl_table[$key]);
-				$ttl_table_changed = true;
-			}
+			if ($this->delTagsOfKey($key, $tags_table)) $tags_table_changed = true;
+			if ($this->delTTLOfKey($key, $ttl_table)) $ttl_table_changed = true;
 			$this->memcache->delete($this->lock_key_prefix.$key);
 		}
 
 		if ($tags_table_changed) $this->memcache->set($this->tags_table_name, $tags_table, null, time()+self::max_ttl);
 		if ($ttl_table_changed) $this->save_TTL_table($ttl_table);
 		return $r;
+	}
+
+	protected function delTTLOfKey($key, &$ttl_table)
+	{
+		if (array_key_exists($key, $ttl_table))
+		{
+			unset($ttl_table[$key]);
+			return true;
+		}
+		return false;
+	}
+
+	protected function delTagsOfKey($key, &$tags_table)
+	{
+		if (array_key_exists($key, $tags_table))
+		{
+			unset($tags_table[$key]);
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -189,7 +193,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	{
 		$ttl_table = $this->read_TTL_table();
 		if (empty($ttl_table)) return true;
-		$t = time();
+		$t       = time();
 		$changed = false;
 		foreach ($ttl_table as $key => $ttl)
 		{
@@ -240,18 +244,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 
 		if (is_array($value))
 		{
-			if ($limit_keys_count > 0 && (count($value) > $limit_keys_count)) $value = array_slice($value, $limit_keys_count*(-1)+1);
-
-			if (is_array($by_value))
-			{
-				$set_key = key($by_value);
-				if (!empty($set_key)) $value[$set_key] = $by_value[$set_key];
-				else $value[] = $by_value[0];
-			}
-			else $value[] = $by_value;
-
-			if ($this->save($key, $value, $ttl)) return $value;
-			else return false;
+			$value = $this->incrementArray($limit_keys_count, $value, $by_value, $key, $ttl);
 		}
 		elseif (is_numeric($value) && is_numeric($by_value))
 		{
@@ -259,17 +252,14 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			else
 			{
 				$value += $by_value;
-				if ($this->save($key, $value, $ttl)) return $value;
-				else return false;
 			}
 		}
 		else
 		{
-			//append() method not used to not break compatibility with Memcache
 			$value .= $by_value;
-			if ($this->save($key, $value, $ttl)) return $value;
-			else return false;
 		}
+		if ($this->save($key, $value, $ttl)) return $value;
+		else return false;
 	}
 
 	/**
@@ -303,12 +293,12 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		}
 		if (is_array($k))
 		{
-			$data = array();
+			$data       = array();
 			$return_ttl = ($ttl_left!==-1 ? true : false);
-			$ttl_left = array();
+			$ttl_left   = array();
 			foreach ($k as $key)
 			{
-				$key = (string)$key;
+				$key        = (string)$key;
 				$data[$key] = $this->memcache->get($this->prefix.$key);
 				if ($data[$key]===false || $data[$key]===null)
 				{
@@ -364,7 +354,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		$k = (string)$k;
+		$k   = (string)$k;
 		$ttl = $this->ttl_to_expiration($ttl);
 
 		if (false===$this->memcache->set($this->prefix.$k, $v, 0, $ttl))
@@ -397,7 +387,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function select_fx($fx, $get_array = false)
 	{
-		$arr = array();
+		$arr  = array();
 		$keys = $this->get_keys();
 		if (empty($keys)) return false;
 
@@ -448,7 +438,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 
 		if (!empty($tags))
 		{
-			$key = (string)$key;
+			$key        = (string)$key;
 			$tags_table = $this->memcache->get($this->tags_table_name);
 			if (empty($tags_table)) $tags_table = array();
 			if (!array_key_exists($key, $tags_table) || $tags!=$tags_table[$key])
@@ -464,7 +454,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	public function getKeyTTL($key)
 	{
 		$ttl_table = $this->read_TTL_table();
-		$key = (string)$key;
+		$key       = (string)$key;
 		if (!array_key_exists($key, $ttl_table)) return false;
 		else return ($ttl_table[$key]-time());
 	}
@@ -504,7 +494,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			$this->prefix = str_replace('.', '_', $ID).'.';
 		}
 		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
-		$this->ttl_table_name = self::ttl_table_prefix.$this->prefix;
+		$this->ttl_table_name  = self::ttl_table_prefix.$this->prefix;
 		$this->tags_table_name = self::tags_table_prefix.$this->prefix;
 	}
 
