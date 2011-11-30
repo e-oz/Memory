@@ -362,7 +362,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		}
 		if (is_array($value))
 		{
-			$value = $this->incrementArray($limit_keys_count, $value, $by_value, $key, $ttl);
+			$value = $this->incrementArray($limit_keys_count, $value, $by_value);
 		}
 		elseif (is_numeric($value) && is_numeric($by_value))
 		{

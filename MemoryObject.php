@@ -50,7 +50,7 @@ abstract class MemoryObject implements IMemoryStorage
 		$this->errors_triggering = $errors_triggering;
 	}
 	
-	protected function incrementArray($limit_keys_count, $value, $by_value, $key, $ttl)
+	protected function incrementArray($limit_keys_count, $value, $by_value)
 	{
 		if ($limit_keys_count > 0 && (count($value) > $limit_keys_count)) $value = array_slice($value, $limit_keys_count*(-1)+1);
 
