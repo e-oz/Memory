@@ -4,14 +4,9 @@ namespace Jamm\Memory;
 /**
  * RedisServer allows you to work with Redis storage in PHP
  *
- * Almost all methods of this class have same names as commands of Redis,
- * each method is documented by PhpDoc-commentary.
+ * Redis version compatibility: 2.4 (also 2.2 and lower)
  *
- * This class doesn't require IRedisServer interface, you can just comment out "//implements IRedisServer"
- * Interface exists just for smart code completion in IDE.
- *
- * You can send custom command using send_command() method,
- * and read errors by getLastErr() and getErrLog() methods.
+ * You can send custom command using send_command() method.
  *
  * All debug-commands declared as magic methods and implemented via __call() method:
  * @method mixed DEBUG_OBJECT($key) Get debugging information about a key
@@ -32,8 +27,6 @@ namespace Jamm\Memory;
 class RedisServer implements IRedisServer
 {
 	protected $connection;
-	protected $last_err;
-	protected $err_log;
 	private $host = 'localhost';
 	private $port = 6379;
 
@@ -48,27 +41,19 @@ class RedisServer implements IRedisServer
 	{
 		if (!empty($this->connection)) fclose($this->connection);
 		$this->connection = $socket = fsockopen($host, $port, $errno, $errstr);
-		if (!$socket) return $this->ReportError('Connection error: '.$errno.':'.$errstr, __LINE__);
+		if (!$socket)
+		{
+			$this->reportError('Connection error: '.$errno.':'.$errstr);
+			return false;
+		}
 		stream_set_timeout($socket, 2592000);
 		return $socket;
 	}
 
-	public function getLastErr()
+	protected function reportError($msg)
 	{
-		$t              = $this->last_err;
-		$this->last_err = '';
-		return $t;
+		trigger_error($msg, E_USER_WARNING);
 	}
-
-	public function ReportError($msg, $line)
-	{
-		$this->last_err  = $line.': '.$msg;
-		$this->err_log[] = $line.': '.$msg;
-		return false;
-	}
-
-	public function getErrLog()
-	{ return $this->err_log; }
 
 	/**
 	 * Execute send_command and return the result
@@ -84,8 +69,7 @@ class RedisServer implements IRedisServer
 	 */
 	public function send_command()
 	{
-		$args = func_get_args();
-		return $this->_send($args);
+		return $this->_send(func_get_args());
 	}
 
 	protected function _send($args)
@@ -100,7 +84,8 @@ class RedisServer implements IRedisServer
 			$this->connect($this->host, $this->port);
 			if (!fwrite($this->connection, $command))
 			{
-				return $this->ReportError('command was not sent', __LINE__);
+				$this->reportError('command was not sent');
+				return false;
 			}
 		}
 		return $this->read_reply();
@@ -127,16 +112,16 @@ class RedisServer implements IRedisServer
 		{
 			/* Error reply */
 			case '-':
-				return $this->ReportError('error: '.$reply, __LINE__);
-				break;
+				$this->reportError('error: '.$reply);
+				return false;
 			/* Inline reply */
 			case '+':
 				return substr(trim($reply), 1);
 				break;
 			/* Bulk reply */
 			case '$':
-				$response = null;
 				if ($reply=='$-1') return null;
+				$response = null;
 				$read = 0;
 				$size = intval(substr($reply, 1));
 				$chi  = 0;
@@ -148,7 +133,11 @@ class RedisServer implements IRedisServer
 						$block_size = $size-$read;
 						if ($block_size > 1024) $block_size = 1024;
 						if ($block_size < 1) break;
-						if ($chi > 1000) return $this->ReportError('loooop', __LINE__);
+						if ($chi > 1000)
+						{
+							$this->reportError('endless loop');
+							return false;
+						}
 						$response .= fread($this->connection, $block_size);
 						$read += $block_size;
 					} while ($read < $size);
@@ -170,8 +159,8 @@ class RedisServer implements IRedisServer
 				return intval(substr(trim($reply), 1));
 				break;
 			default:
-				return $this->ReportError('unkown answer: '.$reply, __LINE__);
-				break;
+				$this->reportError('unkown answer: '.$reply);
+				return $reply;
 		}
 
 		return $response;
@@ -179,27 +168,27 @@ class RedisServer implements IRedisServer
 
 	public function Get($key)
 	{
-		return $this->send_command('get', $key);
+		return $this->_send(array('get', $key));
 	}
 
 	public function Set($key, $value)
 	{
-		return $this->send_command('set', $key, $value);
+		return $this->_send(array('set', $key, $value));
 	}
 
 	public function SetEx($key, $seconds, $value)
 	{
-		return $this->send_command('setex', $key, $seconds, $value);
+		return $this->_send(array('setex', $key, $seconds, $value));
 	}
 
 	public function Keys($pattern)
 	{
-		return $this->send_command('keys', $pattern);
+		return $this->_send(array('keys', $pattern));
 	}
 
 	public function Multi()
 	{
-		return $this->send_command('multi');
+		return $this->_send(array('multi'));
 	}
 
 	public function sAdd($set, $value)
@@ -211,17 +200,17 @@ class RedisServer implements IRedisServer
 
 	public function sMembers($set)
 	{
-		return $this->send_command('smembers', $set);
+		return $this->_send(array('smembers', $set));
 	}
 
 	public function hSet($key, $field, $value)
 	{
-		return $this->send_command('hset', $key, $field, $value);
+		return $this->_send(array('hset', $key, $field, $value));
 	}
 
 	public function hGetAll($key)
 	{
-		$arr = $this->send_command('hgetall', $key);
+		$arr = $this->_send(array('hgetall', $key));
 		$c   = count($arr);
 		$r   = array();
 		for ($i = 0; $i < $c; $i += 2)
@@ -233,12 +222,12 @@ class RedisServer implements IRedisServer
 
 	public function FlushDB()
 	{
-		return $this->send_command('flushdb');
+		return $this->_send(array('flushdb'));
 	}
 
 	public function Info()
 	{
-		return $this->send_command('info');
+		return $this->_send(array('info'));
 	}
 
 	/** Close connection */
@@ -249,7 +238,7 @@ class RedisServer implements IRedisServer
 
 	public function SetNX($key, $value)
 	{
-		return $this->send_command('setnx', $key, $value);
+		return $this->_send(array('setnx', $key, $value));
 	}
 
 	public function Watch()
@@ -261,17 +250,17 @@ class RedisServer implements IRedisServer
 
 	public function Exec()
 	{
-		return $this->send_command('exec');
+		return $this->_send(array('exec'));
 	}
 
 	public function Discard()
 	{
-		return $this->send_command('discard');
+		return $this->_send(array('discard'));
 	}
 
 	public function sIsMember($set, $value)
 	{
-		return $this->send_command('sismember', $set, $value);
+		return $this->_send(array('sismember', $set, $value));
 	}
 
 	public function sRem($set, $value)
@@ -283,12 +272,12 @@ class RedisServer implements IRedisServer
 
 	public function Expire($key, $seconds)
 	{
-		return $this->send_command('expire', $key, $seconds);
+		return $this->_send(array('expire', $key, $seconds));
 	}
 
 	public function TTL($key)
 	{
-		return $this->send_command('ttl', $key);
+		return $this->_send(array('ttl', $key));
 	}
 
 	public function Del($key)
@@ -299,27 +288,27 @@ class RedisServer implements IRedisServer
 
 	public function IncrBy($key, $increment)
 	{
-		return $this->send_command('incrby', $key, $increment);
+		return $this->_send(array('incrby', $key, $increment));
 	}
 
 	public function Append($key, $value)
 	{
-		return $this->send_command('append', $key, $value);
+		return $this->_send(array('append', $key, $value));
 	}
 
 	public function Auth($pasword)
 	{
-		return $this->send_command('Auth', $pasword);
+		return $this->_send(array('Auth', $pasword));
 	}
 
 	public function bgRewriteAOF()
 	{
-		return $this->send_command('bgRewriteAOF');
+		return $this->_send(array('bgRewriteAOF'));
 	}
 
 	public function bgSave()
 	{
-		return $this->send_command('bgSave');
+		return $this->_send(array('bgSave'));
 	}
 
 	public function BLPop($keys, $timeout)
@@ -338,67 +327,67 @@ class RedisServer implements IRedisServer
 
 	public function BRPopLPush($source, $destination, $timeout)
 	{
-		return $this->send_command('BRPopLPush', $source, $destination, $timeout);
+		return $this->_send(array('BRPopLPush', $source, $destination, $timeout));
 	}
 
 	public function Config_Get($pattern)
 	{
-		return $this->send_command('CONFIG GET', $pattern);
+		return $this->_send(array('CONFIG GET', $pattern));
 	}
 
 	public function Config_Set($parameter, $value)
 	{
-		return $this->send_command('CONFIG SET', $parameter, $value);
+		return $this->_send(array('CONFIG SET', $parameter, $value));
 	}
 
 	public function Config_ResetStat()
 	{
-		return $this->send_command('CONFIG RESETSTAT');
+		return $this->_send(array('CONFIG RESETSTAT'));
 	}
 
 	public function DBsize()
 	{
-		return $this->send_command('DBsize');
+		return $this->_send(array('dbsize'));
 	}
 
 	public function Decr($key)
 	{
-		return $this->send_command('Decr', $key);
+		return $this->_send(array('decr', $key));
 	}
 
 	public function DecrBy($key, $decrement)
 	{
-		return $this->send_command('DecrBy', $key, $decrement);
+		return $this->_send(array('DecrBy', $key, $decrement));
 	}
 
 	public function Exists($key)
 	{
-		return $this->send_command('Exists', $key);
+		return $this->_send(array('Exists', $key));
 	}
 
 	public function Expireat($key, $timestamp)
 	{
-		return $this->send_command('Expireat', $key, $timestamp);
+		return $this->_send(array('Expireat', $key, $timestamp));
 	}
 
 	public function FlushAll()
 	{
-		return $this->send_command('FlushAll');
+		return $this->_send(array('flushall'));
 	}
 
 	public function GetBit($key, $offset)
 	{
-		return $this->send_command('GetBit', $key, $offset);
+		return $this->_send(array('GetBit', $key, $offset));
 	}
 
 	public function GetRange($key, $start, $end)
 	{
-		return $this->send_command('GetRange', $key, $start, $end);
+		return $this->_send(array('getrange', $key, $start, $end));
 	}
 
 	public function GetSet($key, $value)
 	{
-		return $this->send_command('GetSet', $key, $value);
+		return $this->_send(array('GetSet', $key, $value));
 	}
 
 	public function hDel($key, $field)
@@ -410,27 +399,27 @@ class RedisServer implements IRedisServer
 
 	public function hExists($key, $field)
 	{
-		return $this->send_command('hExists', $key, $field);
+		return $this->_send(array('hExists', $key, $field));
 	}
 
 	public function hGet($key, $field)
 	{
-		return $this->send_command('hGet', $key, $field);
+		return $this->_send(array('hGet', $key, $field));
 	}
 
 	public function hIncrBy($key, $field, $increment)
 	{
-		return $this->send_command('hIncrBy', $key, $field, $increment);
+		return $this->_send(array('hIncrBy', $key, $field, $increment));
 	}
 
 	public function hKeys($key)
 	{
-		return $this->send_command('hKeys', $key);
+		return $this->_send(array('hKeys', $key));
 	}
 
 	public function hLen($key)
 	{
-		return $this->send_command('hLen', $key);
+		return $this->_send(array('hLen', $key));
 	}
 
 	public function hMGet($key, array $fields)
@@ -452,39 +441,39 @@ class RedisServer implements IRedisServer
 
 	public function hSetNX($key, $field, $value)
 	{
-		return $this->send_command('hSetNX', $key, $field, $value);
+		return $this->_send(array('hSetNX', $key, $field, $value));
 	}
 
 	public function hVals($key)
 	{
-		return $this->send_command('hVals', $key);
+		return $this->_send(array('hVals', $key));
 	}
 
 	public function Incr($key)
 	{
-		return $this->send_command('Incr', $key);
+		return $this->_send(array('Incr', $key));
 	}
 
 	public function LIndex($key, $index)
 	{
-		return $this->send_command('LIndex', $key, $index);
+		return $this->_send(array('LIndex', $key, $index));
 	}
 
 	public function LInsert($key, $after = true, $pivot, $value)
 	{
 		if ($after) $position = self::Position_AFTER;
 		else $position = self::Position_BEFORE;
-		return $this->send_command('LInsert', $key, $position, $pivot, $value);
+		return $this->_send(array('LInsert', $key, $position, $pivot, $value));
 	}
 
 	public function LLen($key)
 	{
-		return $this->send_command('LLen', $key);
+		return $this->_send(array('LLen', $key));
 	}
 
 	public function LPop($key)
 	{
-		return $this->send_command('LPop', $key);
+		return $this->_send(array('LPop', $key));
 	}
 
 	public function LPush($key, $value)
@@ -496,27 +485,27 @@ class RedisServer implements IRedisServer
 
 	public function LPushX($key, $value)
 	{
-		return $this->send_command('LPushX', $key, $value);
+		return $this->_send(array('LPushX', $key, $value));
 	}
 
 	public function LRange($key, $start, $stop)
 	{
-		return $this->send_command('LRange', $key, $start, $stop);
+		return $this->_send(array('LRange', $key, $start, $stop));
 	}
 
 	public function LRem($key, $count, $value)
 	{
-		return $this->send_command('LRem', $key, $count, $value);
+		return $this->_send(array('LRem', $key, $count, $value));
 	}
 
 	public function LSet($key, $index, $value)
 	{
-		return $this->send_command('LSet', $key, $index, $value);
+		return $this->_send(array('LSet', $key, $index, $value));
 	}
 
 	public function LTrim($key, $start, $stop)
 	{
-		return $this->send_command('LTrim', $key, $start, $stop);
+		return $this->_send(array('LTrim', $key, $start, $stop));
 	}
 
 	public function MGet($key)
@@ -527,7 +516,7 @@ class RedisServer implements IRedisServer
 
 	public function Move($key, $db)
 	{
-		return $this->send_command('Move', $key, $db);
+		return $this->_send(array('Move', $key, $db));
 	}
 
 	public function MSet(array $keys)
@@ -554,17 +543,17 @@ class RedisServer implements IRedisServer
 
 	public function Persist($key)
 	{
-		return $this->send_command('Persist', $key);
+		return $this->_send(array('Persist', $key));
 	}
 
 	public function PSubscribe($pattern)
 	{
-		return $this->send_command('PSubscribe', $pattern);
+		return $this->_send(array('PSubscribe', $pattern));
 	}
 
 	public function Publish($channel, $message)
 	{
-		return $this->send_command('Publish', $channel, $message);
+		return $this->_send(array('Publish', $channel, $message));
 	}
 
 	public function PUnsubscribe($patterns = null)
@@ -574,32 +563,32 @@ class RedisServer implements IRedisServer
 			if (!is_array($patterns)) $patterns = array($patterns);
 			return $this->__call('PUnsubscribe', $patterns);
 		}
-		else return $this->send_command('PUnsubscribe');
+		else return $this->_send(array('PUnsubscribe'));
 	}
 
 	public function Quit()
 	{
-		return $this->send_command('Quit');
+		return $this->_send(array('Quit'));
 	}
 
 	public function Rename($key, $newkey)
 	{
-		return $this->send_command('Rename', $key, $newkey);
+		return $this->_send(array('Rename', $key, $newkey));
 	}
 
 	public function RenameNX($key, $newkey)
 	{
-		return $this->send_command('RenameNX', $key, $newkey);
+		return $this->_send(array('RenameNX', $key, $newkey));
 	}
 
 	public function RPop($key)
 	{
-		return $this->send_command('RPop', $key);
+		return $this->_send(array('RPop', $key));
 	}
 
 	public function RPopLPush($source, $destination)
 	{
-		return $this->send_command('RPopLPush', $source, $destination);
+		return $this->_send(array('RPopLPush', $source, $destination));
 	}
 
 	public function RPush($key, $value)
@@ -611,12 +600,12 @@ class RedisServer implements IRedisServer
 
 	public function RPushX($key, $value)
 	{
-		return $this->send_command('RPushX', $key, $value);
+		return $this->_send(array('RPushX', $key, $value));
 	}
 
 	public function sCard($key)
 	{
-		return $this->send_command('sCard', $key);
+		return $this->_send(array('sCard', $key));
 	}
 
 	public function sDiff($key)
@@ -634,17 +623,17 @@ class RedisServer implements IRedisServer
 
 	public function Select($index)
 	{
-		return $this->send_command('Select', $index);
+		return $this->_send(array('Select', $index));
 	}
 
 	public function SetBit($key, $offset, $value)
 	{
-		return $this->send_command('SetBit', $key, $offset, $value);
+		return $this->_send(array('SetBit', $key, $offset, $value));
 	}
 
 	public function SetRange($key, $offset, $value)
 	{
-		return $this->send_command('SetRange', $key, $offset, $value);
+		return $this->_send(array('SetRange', $key, $offset, $value));
 	}
 
 	public function sInter($key)
@@ -662,22 +651,22 @@ class RedisServer implements IRedisServer
 
 	public function SlaveOf($host, $port)
 	{
-		return $this->send_command('SlaveOf', $host, $port);
+		return $this->_send(array('SlaveOf', $host, $port));
 	}
 
 	public function sMove($source, $destination, $member)
 	{
-		return $this->send_command('sMove', $source, $destination, $member);
+		return $this->_send(array('sMove', $source, $destination, $member));
 	}
 
 	public function Sort($key, $sort_rule)
 	{
-		return $this->send_command('Sort', $key, $sort_rule);
+		return $this->_send(array('Sort', $key, $sort_rule));
 	}
 
 	public function StrLen($key)
 	{
-		return $this->send_command('StrLen', $key);
+		return $this->_send(array('StrLen', $key));
 	}
 
 	public function Subscribe($channel)
@@ -701,13 +690,13 @@ class RedisServer implements IRedisServer
 
 	public function Type($key)
 	{
-		return $this->send_command('Type', $key);
+		return $this->_send(array('Type', $key));
 	}
 
 	public function Unsubscribe($channel = '')
 	{
 		$args = func_get_args();
-		if (empty($args)) return $this->send_command('Unsubscribe');
+		if (empty($args)) return $this->_send(array('Unsubscribe'));
 		else
 		{
 			if (is_array($channel)) return $this->__call('Unsubscribe', $channel);
@@ -717,7 +706,7 @@ class RedisServer implements IRedisServer
 
 	public function Unwatch()
 	{
-		return $this->send_command('Unwatch');
+		return $this->_send(array('Unwatch'));
 	}
 
 	public function zAdd($key, $score, $member = NULL)
@@ -737,17 +726,17 @@ class RedisServer implements IRedisServer
 
 	public function zCard($key)
 	{
-		return $this->send_command('zCard', $key);
+		return $this->_send(array('zCard', $key));
 	}
 
 	public function zCount($key, $min, $max)
 	{
-		return $this->send_command('zCount', $key, $min, $max);
+		return $this->_send(array('zCount', $key, $min, $max));
 	}
 
 	public function zIncrBy($key, $increment, $member)
 	{
-		return $this->send_command('zIncrBy', $key, $increment, $member);
+		return $this->_send(array('zIncrBy', $key, $increment, $member));
 	}
 
 	public function zInterStore($destination, array $keys, array $weights = null, $aggregate = null)
@@ -769,8 +758,8 @@ class RedisServer implements IRedisServer
 
 	public function zRange($key, $start, $stop, $withscores = false)
 	{
-		if ($withscores) return $this->send_command('zRange', $key, $start, $stop, self::WITHSCORES);
-		else return $this->send_command('zRange', $key, $start, $stop);
+		if ($withscores) return $this->_send(array('zRange', $key, $start, $stop, self::WITHSCORES));
+		else return $this->_send(array('zRange', $key, $start, $stop));
 	}
 
 	public function zRangeByScore($key, $min, $max, $withscores = false, array $limit = null)
@@ -788,7 +777,7 @@ class RedisServer implements IRedisServer
 
 	public function zRank($key, $member)
 	{
-		return $this->send_command('zRank', $key, $member);
+		return $this->_send(array('zRank', $key, $member));
 	}
 
 	public function zRem($key, $member)
@@ -800,18 +789,18 @@ class RedisServer implements IRedisServer
 
 	public function zRemRangeByRank($key, $start, $stop)
 	{
-		return $this->send_command('zRemRangeByRank', $key, $start, $stop);
+		return $this->_send(array('zRemRangeByRank', $key, $start, $stop));
 	}
 
 	public function zRemRangeByScore($key, $min, $max)
 	{
-		return $this->send_command('zRemRangeByScore', $key, $min, $max);
+		return $this->_send(array('zRemRangeByScore', $key, $min, $max));
 	}
 
 	public function zRevRange($key, $start, $stop, $withscores = false)
 	{
-		if ($withscores) return $this->send_command('zRevRange', $key, $start, $stop, self::WITHSCORES);
-		else return $this->send_command('zRevRange', $key, $start, $stop);
+		if ($withscores) return $this->_send(array('zRevRange', $key, $start, $stop, self::WITHSCORES));
+		else return $this->_send(array('zRevRange', $key, $start, $stop));
 	}
 
 	public function zRevRangeByScore($key, $max, $min, $withscores = false, array $limit = null)
@@ -829,12 +818,12 @@ class RedisServer implements IRedisServer
 
 	public function zRevRank($key, $member)
 	{
-		return $this->send_command('zRevRank', $key, $member);
+		return $this->_send(array('zRevRank', $key, $member));
 	}
 
 	public function zScore($key, $member)
 	{
-		return $this->send_command('zScore', $key, $member);
+		return $this->_send(array('zScore', $key, $member));
 	}
 
 	public function zUnionStore($destination, array $keys, array $weights = null, $aggregate = null)
