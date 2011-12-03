@@ -20,11 +20,11 @@ namespace Jamm\Memory;
 interface IRedisServer
 {
 	const Position_BEFORE = 'BEFORE';
-	const Position_AFTER = 'AFTER';
-	const WITHSCORES = 'WITHSCORES';
-	const Aggregate_SUM = 'SUM';
-	const Aggregate_MIN = 'MIN';
-	const Aggregate_MAX = 'MAX';
+	const Position_AFTER  = 'AFTER';
+	const WITHSCORES      = 'WITHSCORES';
+	const Aggregate_SUM   = 'SUM';
+	const Aggregate_MIN   = 'MIN';
+	const Aggregate_MAX   = 'MAX';
 
 	/**
 	 * Append a value to a key
@@ -339,7 +339,11 @@ interface IRedisServer
 	 * If key does not exist, it is created as empty list before performing the push operation.
 	 * When key holds a value that is not a list, an error is returned.
 	 * @param string $key
-	 * @param string $value
+	 * @param string|array $value
+	 * @usage
+	 * LPush(key, value)
+	 * LPush(key, value1, value2)
+	 * LPush(key, array(value1, value2))
 	 * @return int
 	 */
 	public function LPush($key, $value);
@@ -753,11 +757,15 @@ interface IRedisServer
 	/**
 	 * Add a member to a sorted set, or update its score if it already exists
 	 * @param string $key
-	 * @param int $score
+	 * @param int|array $score
 	 * @param string $member
+	 * Can be used as:
+	 * zadd(key, score, member)
+	 * zadd(key, score1, member1, score2, member2)
+	 * zadd(key, array(score1 => member1, score2 => member2))
 	 * @return int
 	 */
-	public function zAdd($key, $score, $member);
+	public function zAdd($key, $score, $member = NULL);
 
 	/**
 	 * Get the number of members in a sorted set
@@ -832,7 +840,11 @@ interface IRedisServer
 	/**
 	 * Remove a member from a sorted set
 	 * @param string $key
-	 * @param string $member
+	 * @param string|array $member
+	 * @usage
+	 * zrem(key, member)
+	 * zrem(key, member1, member2)
+	 * zrem(key, array(member1, member2))
 	 * @return int
 	 */
 	public function zRem($key, $member);
@@ -959,7 +971,7 @@ interface IRedisServer
 
 	/** Add a member to a set
 	 * @param string $set
-	 * @param string $value
+	 * @param string|array $value or multiple arguments
 	 * @return boolean
 	 */
 	public function sAdd($set, $value);
