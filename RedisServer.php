@@ -109,7 +109,7 @@ class RedisServer implements IRedisServer
 		return $this->_send($args);
 	}
 
-	public function read_reply()
+	protected function read_reply()
 	{
 		$reply    = trim(fgets($this->connection));
 		$response = null;
@@ -119,7 +119,7 @@ class RedisServer implements IRedisServer
 		 * https://github.com/jdp
 		 * Error was fixed there: https://github.com/jamm/redisent
 		 */
-		switch (substr($reply, 0, 1))
+		switch ($reply[0])
 		{
 			/* Error reply */
 			case '-':
@@ -127,29 +127,26 @@ class RedisServer implements IRedisServer
 				return false;
 			/* Inline reply */
 			case '+':
-				return substr(trim($reply), 1);
-				break;
+				return substr($reply, 1);
 			/* Bulk reply */
 			case '$':
 				if ($reply=='$-1') return null;
 				$response = null;
 				$read     = 0;
 				$size     = intval(substr($reply, 1));
-				$chi      = 0;
 				if ($size > 0)
 				{
 					do
 					{
-						$chi++;
-						$block_size = $size-$read;
-						if ($block_size > 1024) $block_size = 1024;
+						$block_size = min($size-$read, 4096);
 						if ($block_size < 1) break;
-						if ($chi > 1000)
+						$data = fread($this->connection, $block_size);
+						if ($data===false)
 						{
-							$this->reportError('endless loop');
+							$this->reportError('error when reading answer');
 							return false;
 						}
-						$response .= fread($this->connection, $block_size);
+						$response .= $data;
 						$read += $block_size;
 					} while ($read < $size);
 				}
@@ -167,11 +164,11 @@ class RedisServer implements IRedisServer
 				break;
 			/* Integer reply */
 			case ':':
-				return intval(substr(trim($reply), 1));
+				return intval(substr($reply, 1));
 				break;
 			default:
-				$this->reportError('unkown answer: '.$reply);
-				return $reply;
+				$this->reportError('Non-protocol answer: [type:'.gettype($reply).'] '.$reply);
+				return false;
 		}
 
 		return $response;
