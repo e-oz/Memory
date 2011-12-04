@@ -33,7 +33,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		$this->memcache = new \Memcache();
 		if (!$this->memcache->connect($host, $port))
 		{
-			$this->ReportError('memcache not connected', __LINE__);
+			$this->ReportError('memcache connection error', __LINE__);
 		}
 	}
 
@@ -98,7 +98,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	{
 		if (empty($key))
 		{
-			$this->ReportError('empty key are not allowed', __LINE__);
+			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
 
@@ -233,7 +233,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		if (!$this->acquire_key($key, $auto_unlocker)) return $this->ReportError('Can not acquire key', __LINE__);
+		if (!$this->acquire_key($key, $auto_unlocker)) return false;
 
 		$value = $this->memcache->get($this->prefix.$key);
 		if (empty($value))
@@ -288,7 +288,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	{
 		if (empty($k))
 		{
-			$this->ReportError('empty key are not allowed', __LINE__);
+			$this->ReportError('empty keys are not allowed', __LINE__);
 			return NULL;
 		}
 		if (is_array($k))
@@ -362,7 +362,6 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			$reason = $this->prefix.$k;
 			if (strlen($this->prefix.$k) > 250) $reason = 'key length should be <250';
 			elseif (strlen(serialize($v)) > 1048576) $reason = 'size of value should be <1Mb';
-			$this->ReportError('can not add key: '.$reason, __LINE__);
 			$this->ReportError('memcache can not store key: '.$reason, __LINE__);
 			return false;
 		}
@@ -416,7 +415,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		$key = $auto_unlocker->getKey();
 		if (empty($key))
 		{
-			$this->ReportError('autoUnlocker should be passed', __LINE__);
+			$this->ReportError('Empty key in the AutoUnlocker', __LINE__);
 			return false;
 		}
 		$auto_unlocker->revoke();

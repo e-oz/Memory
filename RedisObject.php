@@ -191,7 +191,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		if (!$this->acquire_key($key, $auto_unlocker)) return $this->ReportError('Can not acquire key', __LINE__);
+		if (!$this->acquire_key($key, $auto_unlocker)) return false;
 
 		$value = $this->read($key);
 		if ($value===null || $value===false) return $this->save($key, $by_value, $ttl);
@@ -239,7 +239,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		$key = $auto_unlocker->getKey();
 		if (empty($key))
 		{
-			$this->ReportError('autoUnlocker should be passed', __LINE__);
+			$this->ReportError('Empty key in the AutoUnlocker', __LINE__);
 			return false;
 		}
 		$auto_unlocker->revoke();

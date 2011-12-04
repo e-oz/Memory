@@ -9,7 +9,7 @@ abstract class MemoryObject implements IMemoryStorage
 
 	private $last_err;
 	private $err_log;
-	private $errors_triggering = false;
+	private $errors_triggering = true;
 
 	public function getLastErr()
 	{
