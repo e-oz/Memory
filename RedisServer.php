@@ -34,18 +34,22 @@ class RedisServer implements IRedisServer
 	{
 		$this->host = $host;
 		$this->port = $port;
-		$this->connect($host, $port);
 	}
 
 	public function connect($host, $port)
 	{
-		if (!empty($this->connection)) fclose($this->connection);
-		$this->connection = $socket = fsockopen($host, $port, $errno, $errstr);
+		if (!empty($this->connection))
+		{
+			fclose($this->connection);
+			$this->connection = NULL;
+		}
+		$socket = fsockopen($host, $port, $errno, $errstr);
 		if (!$socket)
 		{
 			$this->reportError('Connection error: '.$errno.':'.$errstr);
 			return false;
 		}
+		$this->connection = $socket;
 		stream_set_timeout($socket, 2592000);
 		return $socket;
 	}
@@ -74,6 +78,13 @@ class RedisServer implements IRedisServer
 
 	protected function _send($args)
 	{
+		if (empty($this->connection))
+		{
+			if (!$this->connect($this->host, $this->port))
+			{
+				return false;
+			}
+		}
 		$command = '*'.count($args)."\r\n";
 		foreach ($args as $arg) $command .= "$".strlen($arg)."\r\n".$arg."\r\n";
 
@@ -122,9 +133,9 @@ class RedisServer implements IRedisServer
 			case '$':
 				if ($reply=='$-1') return null;
 				$response = null;
-				$read = 0;
-				$size = intval(substr($reply, 1));
-				$chi  = 0;
+				$read     = 0;
+				$size     = intval(substr($reply, 1));
+				$chi      = 0;
 				if ($size > 0)
 				{
 					do
