@@ -270,7 +270,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function lock_key($key, &$auto_unlocker_variable)
 	{
-		$r = $this->memcache->add($this->lock_key_prefix.$key, 1, null, self::key_lock_time);
+		$r = $this->memcache->add($this->lock_key_prefix.$key, 1, null, $this->key_lock_time);
 		if (!$r) return false;
 		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->setKey($key);

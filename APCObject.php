@@ -390,7 +390,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function lock_key($key, &$auto_unlocker_variable)
 	{
-		$r = apc_add($this->lock_key_prefix.$key, 1, self::key_lock_time);
+		$r = apc_add($this->lock_key_prefix.$key, 1, $this->key_lock_time);
 		if (!$r) return false;
 		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->setKey($key);

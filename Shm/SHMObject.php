@@ -591,7 +591,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	 */
 	public function lock_key($key, &$auto_unlocker_variable)
 	{
-		$r = $this->mem_object->add(self::lock_key_prefix.$key, 1, self::key_lock_time);
+		$r = $this->mem_object->add(self::lock_key_prefix.$key, 1, $this->key_lock_time);
 		if (!$r) return false;
 		$auto_unlocker_variable = new \Jamm\Memory\KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->setKey($key);

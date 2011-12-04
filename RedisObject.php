@@ -223,7 +223,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	{
 		$r = $this->redis->SetNX($this->lock_key_prefix.$key, 1);
 		if (!$r) return false;
-		$this->redis->Expire($this->lock_key_prefix.$key, self::key_lock_time);
+		$this->redis->Expire($this->lock_key_prefix.$key, $this->key_lock_time);
 		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->setKey($key);
 		return true;

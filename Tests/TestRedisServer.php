@@ -11,11 +11,6 @@ class TestRedisServer extends \Jamm\Tester\ClassTest
 		$this->redis = new MockRedisServer();
 	}
 
-	public function getErrLog()
-	{
-		return $this->redis->getErrLog();
-	}
-
 	public function test_Append()
 	{
 		$this->assertEquals('append key value', $this->redis->Append('key', 'value'));
