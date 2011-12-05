@@ -106,6 +106,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function del($keys)
 	{
+		if (empty($keys)) return false;
 		if (!is_array($keys)) $keys = array($keys);
 		$todel = array();
 		$tags  = $this->redis->Keys($this->tag_prefix.'*');

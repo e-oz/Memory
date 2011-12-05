@@ -29,6 +29,7 @@ class RedisServer implements IRedisServer
 	protected $connection;
 	private $host = 'localhost';
 	private $port = 6379;
+	private $repeat_reconnected = false;
 
 	public function __construct($host = 'localhost', $port = '6379')
 	{
@@ -50,7 +51,6 @@ class RedisServer implements IRedisServer
 			return false;
 		}
 		$this->connection = $socket;
-		stream_set_timeout($socket, 2592000);
 		return $socket;
 	}
 
@@ -99,7 +99,16 @@ class RedisServer implements IRedisServer
 				return false;
 			}
 		}
-		return $this->read_reply();
+		$answer = $this->_read_reply();
+		if ($answer===false && $this->repeat_reconnected)
+		{
+			if (fwrite($this->connection, $command))
+			{
+				$answer = $this->_read_reply();
+			}
+			$this->repeat_reconnected = false;
+		}
+		return $answer;
 	}
 
 	/* If some command is not wrapped... */
@@ -109,9 +118,26 @@ class RedisServer implements IRedisServer
 		return $this->_send($args);
 	}
 
-	protected function read_reply()
+	protected function _read_reply()
 	{
-		$reply    = trim(fgets($this->connection));
+		$server_reply = fgets($this->connection);
+		if ($server_reply===false)
+		{
+			if (!$this->connect($this->host, $this->port))
+			{
+				return false;
+			}
+			else
+			{
+				$server_reply = fgets($this->connection);
+				if (empty($server_reply))
+				{
+					$this->repeat_reconnected = true;
+					return false;
+				}
+			}
+		}
+		$reply    = trim($server_reply);
 		$response = null;
 
 		/**
@@ -159,7 +185,7 @@ class RedisServer implements IRedisServer
 				$response = array();
 				for ($i = 0; $i < $count; $i++)
 				{
-					$response[] = $this->read_reply();
+					$response[] = $this->_read_reply();
 				}
 				break;
 			/* Integer reply */
@@ -167,7 +193,7 @@ class RedisServer implements IRedisServer
 				return intval(substr($reply, 1));
 				break;
 			default:
-				$this->reportError('Non-protocol answer: [type:'.gettype($reply).'] '.$reply);
+				$this->reportError('Non-protocol answer: '.print_r($server_reply, 1));
 				return false;
 		}
 
