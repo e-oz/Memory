@@ -85,9 +85,6 @@ You can use each storage separately, requirements are individually for storages
 Memcache is not the fastest and not secure enough storage, so use it only when it's necessary. [Read more](http://code.google.com/p/memcached/wiki/WhyNotMemcached)
 
 ###If you want to use Redis:  
-[Redis](http://redis.io) server should be installed (in debian/ubuntu: "apt-get install redis-server").
-=======
-###For Redis:
 [Redis](http://redis.io) server should be installed (in debian/ubuntu: "apt-get install redis-server").  
 Supported version is 2.4 and below.
 Also, [phpredis](https://github.com/nicolasff/phpredis) (if installed) can be used as client library - just use `PhpRedisObject` instead of default `RedisObject`.
