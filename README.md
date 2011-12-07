@@ -69,22 +69,22 @@ Example in code:
 To avoid the "Dog-pile" effect ("cache miss storm", "cache stampede"), we can use second argument of method read() - when time of expiration is near, we can try to lock key, and if key was locked - update value.   
 See example in [demo.php](https://github.com/jamm/Memory/blob/master/demo.php).    
 
-##Requirements:
+##Requirements:  
 You can use each storage separately, requirements are individually for storages
 
 ###PHP version: 5.3+ (maybe 5.2+, not checked)
 
-###If you want to use APC:
+###If you want to use APC:  
 [APC](http://pecl.php.net/package/APC) should be installed, and this setting should be added in php.ini (or apc.ini if you use it)
 
 + apc.slam_defense = Off
 + __recommended:__ apc.user_ttl = 0
 
-###If you want to use Memcached:
+###If you want to use Memcached:  
 [Memcache](http://pecl.php.net/package/memcache) or [Memcached](http://pecl.php.net/package/memcached) PHP extension should be installed.  
 Memcache is not the fastest and not secure enough storage, so use it only when it's necessary. [Read more](http://code.google.com/p/memcached/wiki/WhyNotMemcached)
 
-###If you want to use Redis:
+###If you want to use Redis:  
 [Redis](http://redis.io) server should be installed (in debian/ubuntu: "apt-get install redis-server").
 =======
 ###For Redis:
