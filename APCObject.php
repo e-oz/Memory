@@ -119,7 +119,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		$i    = new \APCIterator('user', '/^'.preg_quote($this->prefix.$key).'$/', APC_ITER_TTL+APC_ITER_CTIME, 1);
 		$item = $i->current();
-		if (empty($item)) $this->ReportError('key '.$key.' not found'.count($i), __LINE__);
+		if (empty($item)) return NULL;
 		if ($item[self::apc_arr_ttl]!=0) return (($item[self::apc_arr_ctime]+$item[self::apc_arr_ttl])-time());
 		else return self::max_ttl;
 	}
@@ -135,7 +135,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		if (empty($k))
 		{
-			$this->ReportError('empty key are not allowed', __LINE__);
+			$this->ReportError('empty keys are not allowed', __LINE__);
 			return NULL;
 		}
 		if (is_array($k))
@@ -197,7 +197,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		if (empty($k))
 		{
-			$this->ReportError('empty key are not allowed', __LINE__);
+			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
 
@@ -352,7 +352,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		if (!$this->acquire_key($key, $auto_unlocker)) return $this->ReportError('Can not acquire key', __LINE__);
+		if (!$this->acquire_key($key, $auto_unlocker)) return false;
 
 		$value = apc_fetch($this->prefix.$key, $success);
 		if (!$success)
@@ -390,7 +390,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function lock_key($key, &$auto_unlocker_variable)
 	{
-		$r = apc_add($this->lock_key_prefix.$key, 1, self::key_lock_time);
+		$r = apc_add($this->lock_key_prefix.$key, 1, $this->key_lock_time);
 		if (!$r) return false;
 		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->setKey($key);
@@ -407,7 +407,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		$key = $auto_unlocker->getKey();
 		if (empty($key))
 		{
-			$this->ReportError('autoUnlocker should be passed', __LINE__);
+			$this->ReportError('Empty name of key in the AutoUnlocker', __LINE__);
 			return false;
 		}
 		$auto_unlocker->revoke();

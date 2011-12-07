@@ -106,6 +106,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function del($keys)
 	{
+		if (empty($keys)) return false;
 		if (!is_array($keys)) $keys = array($keys);
 		$todel = array();
 		$tags  = $this->redis->Keys($this->tag_prefix.'*');
@@ -191,7 +192,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 
-		if (!$this->acquire_key($key, $auto_unlocker)) return $this->ReportError('Can not acquire key', __LINE__);
+		if (!$this->acquire_key($key, $auto_unlocker)) return false;
 
 		$value = $this->read($key);
 		if ($value===null || $value===false) return $this->save($key, $by_value, $ttl);
@@ -223,7 +224,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	{
 		$r = $this->redis->SetNX($this->lock_key_prefix.$key, 1);
 		if (!$r) return false;
-		$this->redis->Expire($this->lock_key_prefix.$key, self::key_lock_time);
+		$this->redis->Expire($this->lock_key_prefix.$key, $this->key_lock_time);
 		$auto_unlocker_variable = new KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->setKey($key);
 		return true;
@@ -239,7 +240,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		$key = $auto_unlocker->getKey();
 		if (empty($key))
 		{
-			$this->ReportError('autoUnlocker should be passed', __LINE__);
+			$this->ReportError('Empty key in the AutoUnlocker', __LINE__);
 			return false;
 		}
 		$auto_unlocker->revoke();

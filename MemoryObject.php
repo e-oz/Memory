@@ -4,12 +4,12 @@ namespace Jamm\Memory;
 abstract class MemoryObject implements IMemoryStorage
 {
 	const max_ttl = 2592000;
-	const key_lock_time = 30;
-	const max_wait_unlock = 0.05;
+	protected $key_lock_time = 30;
+	protected $max_wait_unlock = 0.05;
 
 	private $last_err;
 	private $err_log;
-	private $errors_triggering = false;
+	private $errors_triggering = true;
 
 	public function getLastErr()
 	{
@@ -23,6 +23,10 @@ abstract class MemoryObject implements IMemoryStorage
 		$error_message   = $line.': '.$msg;
 		$this->last_err  = $error_message;
 		$this->err_log[] = $error_message;
+		if (count($this->err_log) > 100)
+		{
+			array_shift($this->err_log);
+		}
 		if ($this->errors_triggering) trigger_error($error_message, E_USER_WARNING);
 		return false;
 	}
@@ -40,7 +44,7 @@ abstract class MemoryObject implements IMemoryStorage
 		$t = microtime(true);
 		while (!$this->lock_key($key, $auto_unlocker))
 		{
-			if ((microtime(true)-$t) > self::max_wait_unlock) return false;
+			if ((microtime(true)-$t) > $this->max_wait_unlock) return false;
 		}
 		return true;
 	}
@@ -49,7 +53,7 @@ abstract class MemoryObject implements IMemoryStorage
 	{
 		$this->errors_triggering = $errors_triggering;
 	}
-	
+
 	protected function incrementArray($limit_keys_count, $value, $by_value)
 	{
 		if ($limit_keys_count > 0 && (count($value) > $limit_keys_count)) $value = array_slice($value, $limit_keys_count*(-1)+1);
@@ -62,5 +66,15 @@ abstract class MemoryObject implements IMemoryStorage
 		}
 		else $value[] = $by_value;
 		return $value;
-	}	
+	}
+
+	public function set_max_wait_unlock_time($max_wait_unlock = 0.05)
+	{
+		$this->max_wait_unlock = $max_wait_unlock;
+	}
+
+	public function set_key_lock_time($key_lock_time = 30)
+	{
+		$this->key_lock_time = $key_lock_time;
+	}
 }

@@ -11,11 +11,6 @@ class TestRedisServer extends \Jamm\Tester\ClassTest
 		$this->redis = new MockRedisServer();
 	}
 
-	public function getErrLog()
-	{
-		return $this->redis->getErrLog();
-	}
-
 	public function test_Append()
 	{
 		$this->assertEquals('append key value', $this->redis->Append('key', 'value'));
@@ -133,6 +128,8 @@ class TestRedisServer extends \Jamm\Tester\ClassTest
 	public function test_hDel()
 	{
 		$this->assertEquals('hdel key field', $this->redis->hDel('key', 'field'));
+		$this->assertEquals('hdel key field field1', $this->redis->hDel('key', 'field', 'field1'));
+		$this->assertEquals('hdel key field field1', $this->redis->hDel('key', array('field', 'field1')));
 	}
 
 	public function test_hExists()
@@ -219,6 +216,8 @@ class TestRedisServer extends \Jamm\Tester\ClassTest
 	public function test_LPush()
 	{
 		$this->assertEquals('lpush key value', $this->redis->LPush('key', 'value'));
+		$this->assertEquals('lpush key value v1 v2', $this->redis->LPush('key', 'value', 'v1', 'v2'));
+		$this->assertEquals('lpush key value v1 v2', $this->redis->LPush('key', array('value', 'v1', 'v2')));
 	}
 
 	public function test_LPushX()
@@ -453,6 +452,8 @@ class TestRedisServer extends \Jamm\Tester\ClassTest
 	public function test_zAdd()
 	{
 		$this->assertEquals('zadd k 101 m', $this->redis->zAdd('k', 101, 'm'));
+		$this->assertEquals('zadd k 101 m 102 m2', $this->redis->zAdd('k', 101, 'm', 102, 'm2'));
+		$this->assertEquals('zadd k 101 m 102 m2', $this->redis->zAdd('k', array(101 => 'm', 102 => 'm2')));
 	}
 
 	public function test_zCard()
@@ -500,6 +501,8 @@ class TestRedisServer extends \Jamm\Tester\ClassTest
 	public function test_zRem()
 	{
 		$this->assertEquals('zrem k m', $this->redis->zRem('k', 'm'));
+		$this->assertEquals('zrem k m m1', $this->redis->zRem('k', 'm', 'm1'));
+		$this->assertEquals('zrem k m m1', $this->redis->zRem('k', array('m', 'm1')));
 	}
 
 	public function test_zRemRangeByRank()
@@ -576,6 +579,8 @@ class TestRedisServer extends \Jamm\Tester\ClassTest
 	public function test_sAdd()
 	{
 		$this->assertEquals('sadd set v', $this->redis->sAdd('set', 'v'));
+		$this->assertEquals('sadd set v v1', $this->redis->sAdd('set', 'v', 'v1'));
+		$this->assertEquals('sadd set v v1', $this->redis->sAdd('set', array('v', 'v1')));
 	}
 
 	public function test_sIsMember()
@@ -591,6 +596,8 @@ class TestRedisServer extends \Jamm\Tester\ClassTest
 	public function test_sRem()
 	{
 		$this->assertEquals('srem s v', $this->redis->sRem('s', 'v'));
+		$this->assertEquals('srem s v v1', $this->redis->sRem('s', 'v', 'v1'));
+		$this->assertEquals('srem s v v1', $this->redis->sRem('s', array('v', 'v1')));
 	}
 
 	public function test_info()

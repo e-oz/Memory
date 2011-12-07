@@ -53,13 +53,11 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('write mutex not acquired', __LINE__);
 			return false;
 		}
 		$map = $this->mem_object->read('map');
 		if (isset($map[$k]))
 		{
-			$this->ReportError('key already exists', __LINE__);
 			return false;
 		}
 		return $this->save($k, $v, $ttl, $tags);
@@ -109,7 +107,6 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('write mutex not acquired', __LINE__);
 			return false;
 		}
 		$map             = $this->mem_object->read('map');
@@ -241,7 +238,6 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_read($auto_unlocker))
 		{
-			$this->ReportError('read access mutex not acquired', __LINE__);
 			return NULL;
 		}
 		$map = $this->mem_object->read('map');
@@ -291,7 +287,6 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			$k = (string)$k;
 			if (!array_key_exists($k, $map))
 			{
-				$this->ReportError('key are not in map', __LINE__);
 				return NULL;
 			}
 			$ttl_left = self::max_ttl;
@@ -300,7 +295,6 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 				$ttl_left = $map[$k][self::map_key_ttl]-time();
 				if ($ttl_left <= 0)
 				{
-					$this->ReportError('ttl expired', __LINE__);
 					$this->del($k);
 					return NULL;
 				}
@@ -387,7 +381,6 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('write mutex not acquired', __LINE__);
 			return false;
 		}
 		$map = $this->mem_object->read('map');
@@ -422,7 +415,6 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('write mutex was not acquired', __LINE__);
 			return false;
 		}
 		$r     = 0;
@@ -452,7 +444,6 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('write mutex not acquired', __LINE__);
 			return false;
 		}
 		$mem_tags = $this->mem_object->read('tags');
@@ -478,7 +469,6 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_read($auto_unlocker))
 		{
-			$this->ReportError('read mutex not acquired', __LINE__);
 			return false;
 		}
 		$map = $this->mem_object->read('map');
@@ -519,7 +509,6 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('write mutex not acquired', __LINE__);
 			return false;
 		}
 		$map = $this->mem_object->read('map');
@@ -591,7 +580,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	 */
 	public function lock_key($key, &$auto_unlocker_variable)
 	{
-		$r = $this->mem_object->add(self::lock_key_prefix.$key, 1, self::key_lock_time);
+		$r = $this->mem_object->add(self::lock_key_prefix.$key, 1, $this->key_lock_time);
 		if (!$r) return false;
 		$auto_unlocker_variable = new \Jamm\Memory\KeyAutoUnlocker(array($this, 'unlock_key'));
 		$auto_unlocker_variable->setKey($key);
@@ -608,7 +597,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		$key = $auto_unlocker->getKey();
 		if (empty($key))
 		{
-			$this->ReportError('autoUnlocker should be passed', __LINE__);
+			$this->ReportError('Empty key in the AutoUnlocker', __LINE__);
 			return false;
 		}
 		$auto_unlocker->revoke();

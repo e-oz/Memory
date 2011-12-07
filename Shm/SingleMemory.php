@@ -27,14 +27,13 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 	{
 		if (empty($k) || $v===NULL)
 		{
-			$this->ReportError('empty key and null value are not allowed', __LINE__);
+			$this->ReportError('empty keys and null values are not allowed', __LINE__);
 			return false;
 		}
 		$k = (string)$k;
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('can not acquire writers mutex', __LINE__);
 			return false;
 		}
 
@@ -69,7 +68,7 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 	{
 		if (empty($k))
 		{
-			$this->ReportError('empty key are not allowed', __LINE__);
+			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
 
@@ -136,13 +135,11 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('can not acquire writers mutex', __LINE__);
 			return false;
 		}
 		$this->readmemory();
 		if (empty($this->mem))
 		{
-			$this->ReportError('memory are empty', __LINE__);
 			return false;
 		}
 
@@ -185,7 +182,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('can not acquire writers mutex', __LINE__);
 			return false;
 		}
 
@@ -193,7 +189,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		$this->readmemory();
 		if (isset($this->mem[self::map_keys][$key]))
 		{
-			$this->ReportError('key already exists', __LINE__);
 			return false;
 		}
 
@@ -238,14 +233,12 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('can not acquire writers mutex', __LINE__);
 			return false;
 		}
 
 		$this->readmemory();
 		if (empty($this->mem[self::map_key_tags]))
 		{
-			$this->ReportError('tags was not found', __LINE__);
 			return false;
 		}
 
@@ -266,7 +259,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('can not acquire writers mutex', __LINE__);
 			return false;
 		}
 
@@ -317,7 +309,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('can not acquire writers mutex', __LINE__);
 			return false;
 		}
 
@@ -356,7 +347,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('can not acquire writers mutex', __LINE__);
 			return false;
 		}
 		$this->readmemory();
@@ -364,7 +354,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 
 		if (isset($this->mem[self::map_key_locks][$key]))
 		{
-			$this->ReportError('key locked', __LINE__);
 			return false;
 		}
 
@@ -388,14 +377,13 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		$key = $key_auto_unlocker->getKey();
 		if (empty($key))
 		{
-			$this->ReportError('autoUnlocker should be passed', __LINE__);
+			$this->ReportError('Empty key in the AutoUnlocker', __LINE__);
 			return false;
 		}
 		$key_auto_unlocker->revoke();
 
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
-			$this->ReportError('can not acquire writers mutex', __LINE__);
 			return false;
 		}
 		$this->readmemory();
