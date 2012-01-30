@@ -366,12 +366,12 @@ class RedisServer implements IRedisServer
 
 	public function Config_Get($pattern)
 	{
-		return $this->_send(array('CONFIG GET', $pattern));
+		return $this->_send(array('CONFIG', 'GET', $pattern));
 	}
 
 	public function Config_Set($parameter, $value)
 	{
-		return $this->_send(array('CONFIG SET', $parameter, $value));
+		return $this->_send(array('CONFIG', 'SET', $parameter, $value));
 	}
 
 	public function Config_ResetStat()
