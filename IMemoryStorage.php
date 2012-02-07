@@ -101,7 +101,9 @@ interface IMemoryStorage
 	 */
 	public function unlock_key(KeyAutoUnlocker $auto_unlocker);
 
-	/** Return array of all stored keys */
+	/**
+	 * @return array of all stored keys
+	 */
 	public function get_keys();
 
 	/**
