@@ -158,23 +158,10 @@ class RedisServer implements IRedisServer
 			case '$':
 				if ($reply=='$-1') return null;
 				$response = null;
-				$read     = 0;
 				$size     = intval(substr($reply, 1));
 				if ($size > 0)
 				{
-					do
-					{
-						$block_size = min($size-$read, 4096);
-						if ($block_size < 1) break;
-						$data = fread($this->connection, $block_size);
-						if ($data===false)
-						{
-							$this->reportError('error when reading answer');
-							return false;
-						}
-						$response .= $data;
-						$read += $block_size;
-					} while ($read < $size);
+				    $response = stream_get_contents($this->connection, $size);
 				}
 				fread($this->connection, 2); /* discard crlf */
 				break;
