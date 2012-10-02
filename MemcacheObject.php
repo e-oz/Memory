@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory;
-
 class MemcacheObject extends MemoryObject implements IMemoryStorage
 {
 	protected $prefix = 'K'; //because I love my wife Katya :)
@@ -54,9 +53,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			return false;
 		}
 		$k = (string)$k;
-
 		$ttl = $this->ttl_to_expiration($ttl);
-
 		if (!$this->memcache->add($this->prefix.$k, $v, null, $ttl))
 		{
 			$reason = 'key already exists';
@@ -65,13 +62,10 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('can not add key: '.$reason, __LINE__);
 			return false;
 		}
-
 		$ttl_table     = $this->read_TTL_table();
 		$ttl_table[$k] = $ttl;
 		$this->save_TTL_table($ttl_table);
-
 		if (!empty($tags)) $this->set_tags($k, $tags);
-
 		return true;
 	}
 
@@ -101,16 +95,12 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
-
 		$tags_table = $this->memcache->get($this->tags_table_name);
 		if (empty($tags_table)) $tags_table = array();
 		$tags_table_changed = false;
-
 		$ttl_table         = $this->read_TTL_table();
 		$ttl_table_changed = false;
-
 		$r = true;
-
 		if (is_array($key))
 		{
 			foreach ($key as $k)
@@ -129,7 +119,6 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			if ($this->delTTLOfKey($key, $ttl_table)) $ttl_table_changed = true;
 			$this->memcache->delete($this->lock_key_prefix.$key);
 		}
-
 		if ($tags_table_changed) $this->memcache->set($this->tags_table_name, $tags_table, null, time()+self::max_ttl);
 		if ($ttl_table_changed) $this->save_TTL_table($ttl_table);
 		return $r;
@@ -164,10 +153,8 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	public function del_by_tags($tags)
 	{
 		if (!is_array($tags)) $tags = array($tags);
-
 		$tags_table = $this->memcache->get($this->tags_table_name);
 		if (empty($tags_table)) return false;
-
 		$tags_table_changed = false;
 		foreach ($tags_table as $key => $key_tags)
 		{
@@ -179,9 +166,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 				$tags_table_changed = true;
 			}
 		}
-
 		if ($tags_table_changed) $this->memcache->set($this->tags_table_name, $tags_table, null, time()+self::max_ttl);
-
 		return true;
 	}
 
@@ -218,9 +203,9 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	 * Increment value of key
 	 * @param string $key
 	 * @param mixed $by_value
-	 *							  if stored value is array:
-	 *							  if $by_value is value in array, new element will be pushed to the end of array,
-	 *							  if $by_value is key=>value array, key=>value pair will be added (or updated)
+	 *                              if stored value is array:
+	 *                              if $by_value is value in array, new element will be pushed to the end of array,
+	 *                              if $by_value is key=>value array, key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
 	 * @param int $ttl
 	 * @return int|string|array new value of key
@@ -232,16 +217,13 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
-
 		if (!$this->acquire_key($key, $auto_unlocker)) return false;
-
 		$value = $this->memcache->get($this->prefix.$key);
 		if (empty($value))
 		{
 			if ($this->save($key, $by_value, $ttl)) return $by_value;
 			else return false;
 		}
-
 		if (is_array($value))
 		{
 			$value = $this->incrementArray($limit_keys_count, $value, $by_value);
@@ -340,9 +322,9 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k		  - key
-	 * @param mixed $v		   - value
-	 * @param int $ttl		   - time to live (store) in seconds
+	 * @param string $k          - key
+	 * @param mixed $v           - value
+	 * @param int $ttl           - time to live (store) in seconds
 	 * @param array|string $tags - array of tags for this key
 	 * @return bool
 	 */
@@ -353,10 +335,8 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
-
 		$k   = (string)$k;
 		$ttl = $this->ttl_to_expiration($ttl);
-
 		if (false===$this->memcache->set($this->prefix.$k, $v, 0, $ttl))
 		{
 			$reason = $this->prefix.$k;
@@ -365,14 +345,12 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('memcache can not store key: '.$reason, __LINE__);
 			return false;
 		}
-
 		$ttl_table = $this->read_TTL_table();
 		if (!isset($ttl_table[$k]) || $ttl_table[$k]!=$ttl)
 		{
 			$ttl_table[$k] = $ttl;
 			$this->save_TTL_table($ttl_table);
 		}
-
 		if (!empty($tags)) $this->set_tags($k, $tags);
 		return true;
 	}
@@ -380,7 +358,7 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Select from storage via callback function
 	 * Only values of 'array' type will be selected
-	 * @param callback $fx ($value_array,$key)
+	 * @param callable $fx ($value_array,$key)
 	 * @param bool $get_array
 	 * @return mixed
 	 */
@@ -389,12 +367,10 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 		$arr  = array();
 		$keys = $this->get_keys();
 		if (empty($keys)) return false;
-
 		foreach ($keys as $index)
 		{
 			$s = $this->read($index);
 			if (!is_array($s)) continue;
-
 			if ($fx($s, $index)===true)
 			{
 				if (!$get_array) return $s;
@@ -434,7 +410,6 @@ class MemcacheObject extends MemoryObject implements IMemoryStorage
 			if (is_scalar($tags)) $tags = array($tags);
 			else $tags = array();
 		}
-
 		if (!empty($tags))
 		{
 			$key        = (string)$key;

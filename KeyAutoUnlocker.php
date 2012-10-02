@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory;
-
 /** thanks to authors of RAII! */
 class KeyAutoUnlocker implements IKeyLocker
 {
@@ -8,7 +7,7 @@ class KeyAutoUnlocker implements IKeyLocker
 	protected $Unlock = NULL;
 
 	/**
-	 * @param callback $Unlock
+	 * @param callable $Unlock
 	 */
 	public function __construct($Unlock)
 	{

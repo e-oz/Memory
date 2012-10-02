@@ -24,11 +24,9 @@ class MultiAccess implements IMutex
 		if (($this->writers_count <= 0) && ($this->readers_count <= 0)) //if it is nested call - access should be given only once
 		{
 			if (!$this->wait(self::writers)) return false; //if somebody are writing here now - we will wait
-
 			$sent = $this->increment(self::readers); //increment count of readers - writers will be waiting for us while we read.
 			if (!$sent) return false;
 		}
-
 		$auto_unlocker_reference = new \Jamm\Memory\KeyAutoUnlocker(array($this, 'release_access_read'));
 		$this->readers_count++;
 		return true;
@@ -51,13 +49,10 @@ class MultiAccess implements IMutex
 				$this->readers_count = 0;
 				$this->release_access_read($auto_unlocker_reference);
 			}
-
 			//acquire mutex for writing
 			if (!$this->acquire_writers_mutex()) return false;
-
 			//only 1 writer can send message to writers queue, so if in queue more than 1 message - it's somebody's error, and we will fix it now:
 			$this->clean_queue(self::writers);
-
 			//tell to readers, that they should wait while we will write
 			//this action should be made before writer will wait for readers
 			$sent = $this->increment(self::writers); //after this command, readers will wait, until we will leave the queue
@@ -66,7 +61,6 @@ class MultiAccess implements IMutex
 				$this->release_writers_mutex();
 				return false;
 			}
-
 			//but if readers has come before us - wait, until they finish
 			if (!$this->wait(self::readers))
 			{
@@ -75,7 +69,6 @@ class MultiAccess implements IMutex
 				return false;
 			}
 		}
-
 		$auto_unlocker_reference = new \Jamm\Memory\KeyAutoUnlocker(array($this, 'release_access_write'));
 		$this->writers_count++;
 		//and now we can write :)
@@ -134,7 +127,7 @@ class MultiAccess implements IMutex
 
 	protected function clean_queue($type = self::writers)
 	{
-		$q = $this->select_q($type);
+		$q    = $this->select_q($type);
 		$stat = msg_stat_queue($q);
 		if ($stat['msg_qnum'] > 0)
 		{
@@ -152,7 +145,7 @@ class MultiAccess implements IMutex
 		$sent = msg_send($q, $type, $type, false, false, $err);
 		if ($sent==false)
 		{
-			$counter = $this->get_counter($type);
+			$counter         = $this->get_counter($type);
 			$this->err_log[] = 'Message was not sent to queue '.($type==self::readers ? 'readers '.$this->read_q_key
 					: 'writers '.$this->write_q_key)
 					.' counter: '.$counter.', error: '.$err;
@@ -182,7 +175,7 @@ class MultiAccess implements IMutex
 
 	public function get_counter($type = self::writers)
 	{
-		$q = $this->select_q($type);
+		$q    = $this->select_q($type);
 		$stat = msg_stat_queue($q);
 		return $stat['msg_qnum'];
 	}
@@ -196,7 +189,6 @@ class MultiAccess implements IMutex
 	{
 		$q = $this->select_q($type);
 		if (empty($q)) return false;
-
 		$stat = msg_stat_queue($q);
 		if ($stat['msg_qnum'] > 0)
 		{
@@ -206,10 +198,8 @@ class MultiAccess implements IMutex
 				$stat = msg_stat_queue($q);
 				if (empty($stat)) break;
 				if ($stat['msg_qnum'] <= 0) break;
-
 				if ((microtime(true)-$starttime) > $this->max_wait_time) return false;
-			}
-			while ($stat['msg_qnum'] > 0);
+			} while ($stat['msg_qnum'] > 0);
 		}
 		return true;
 	}
@@ -248,19 +238,17 @@ class MultiAccess implements IMutex
 	{
 		if ($this->writers_count > 0)
 		{
-			$this->err_log[] = 'writers count = '.$this->writers_count;
+			$this->err_log[]     = 'writers count = '.$this->writers_count;
 			$this->writers_count = 0;
 			$this->release_access_write();
 		}
 		$this->release_writers_mutex();
-
 		if ($this->readers_count > 0)
 		{
-			$this->err_log[] = 'readers count = '.$this->readers_count;
+			$this->err_log[]     = 'readers count = '.$this->readers_count;
 			$this->readers_count = 0;
 			$this->release_access_read();
 		}
-
 		if (!empty($this->err_log))
 		{
 			trigger_error('MultiAccess errors '.implode("\n", $this->err_log), E_USER_NOTICE);

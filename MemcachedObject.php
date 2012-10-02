@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory;
-
 class MemcachedObject extends MemcacheObject
 {
 	protected function setMemcacheObject($host = 'localhost', $port = 11211)

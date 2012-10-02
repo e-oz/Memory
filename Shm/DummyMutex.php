@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory\Shm;
-
 class DummyMutex implements IMutex
 {
 

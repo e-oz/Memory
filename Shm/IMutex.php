@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory\Shm;
-
 interface IMutex
 {
 	public function get_access_read(&$auto_unlocker_reference);

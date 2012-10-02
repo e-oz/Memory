@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory;
-
 interface IMemcacheDecorator
 {
 	public function add($key, $var, $flag = null, $ttl = 0);

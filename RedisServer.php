@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory;
-
 /**
  * RedisServer allows you to work with Redis storage in PHP
  *
@@ -87,7 +86,6 @@ class RedisServer implements IRedisServer
 		}
 		$command = '*'.count($args)."\r\n";
 		foreach ($args as $arg) $command .= "$".strlen($arg)."\r\n".$arg."\r\n";
-
 		$w = fwrite($this->connection, $command);
 		if (!$w)
 		{
@@ -139,7 +137,6 @@ class RedisServer implements IRedisServer
 		}
 		$reply    = trim($server_reply);
 		$response = null;
-
 		/**
 		 * Thanks to Justin Poliey for original code of parsing the answer
 		 * https://github.com/jdp
@@ -161,7 +158,7 @@ class RedisServer implements IRedisServer
 				$size     = intval(substr($reply, 1));
 				if ($size > 0)
 				{
-				    $response = stream_get_contents($this->connection, $size);
+					$response = stream_get_contents($this->connection, $size);
 				}
 				fread($this->connection, 2); /* discard crlf */
 				break;
@@ -183,7 +180,6 @@ class RedisServer implements IRedisServer
 				$this->reportError('Non-protocol answer: '.print_r($server_reply, 1));
 				return false;
 		}
-
 		return $response;
 	}
 

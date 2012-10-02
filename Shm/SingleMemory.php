@@ -1,20 +1,19 @@
 <?php
 namespace Jamm\Memory\Shm;
-
 abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingleMemory
 {
 	/** @var IMutex $sem */
 	protected $sem;
 	protected $mem = array();
 
-	const map_info = 'info';
-	const map_info_resized = 'resized';
+	const map_info            = 'info';
+	const map_info_resized    = 'resized';
 	const map_info_resizetime = 'resized_lasttime';
-	const map_keys = 'keys';
-	const map_key_ttl = 'ttl';
-	const map_key_tags = 'tags';
-	const map_key_locks = 'locks';
-	const map_key_cleantime = 'clean';
+	const map_keys            = 'keys';
+	const map_key_ttl         = 'ttl';
+	const map_key_tags        = 'tags';
+	const map_key_locks       = 'locks';
+	const map_key_cleantime   = 'clean';
 
 	/**
 	 * @param string $k key
@@ -30,18 +29,16 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 			$this->ReportError('empty keys and null values are not allowed', __LINE__);
 			return false;
 		}
-		$k = (string)$k;
+		$k             = (string)$k;
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
 			return false;
 		}
-
 		$this->del_old();
-
 		$this->readmemory();
 		$this->mem[self::map_keys][$k] = $v;
-		$ttl = intval($ttl);
+		$ttl                           = intval($ttl);
 		if ($ttl > 0) $this->mem[self::map_key_ttl][$k] = time()+$ttl;
 		if (!empty($tags))
 		{
@@ -54,7 +51,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 					$this->mem[self::map_key_tags][$tag][] = $k;
 			}
 		}
-
 		return $this->refresh();
 	}
 
@@ -71,13 +67,11 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
-
 		$this->readmemory();
 		if (empty($this->mem)) return false;
-
 		if (is_array($k))
 		{
-			$keys = array();
+			$keys     = array();
 			$ttl_left = array();
 			foreach ($k as $ki)
 			{
@@ -99,8 +93,8 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		}
 		else
 		{
-			$k = (string)$k;
-			$r = $this->mem[self::map_keys][$k];
+			$k        = (string)$k;
+			$r        = $this->mem[self::map_keys][$k];
 			$ttl_left = $this->get_key_ttl($k, $this->mem);
 			if ($ttl_left <= 0) $r = NULL;
 			else
@@ -142,7 +136,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		{
 			return false;
 		}
-
 		if (!is_array($k)) $k = array($k);
 		foreach ($k as $key)
 		{
@@ -163,7 +156,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 			}
 			unset($this->mem[self::map_key_locks][$key]);
 		}
-
 		return $this->refresh();
 	}
 
@@ -178,26 +170,23 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 	public function add($key, $value, $ttl = 2592000, $tags = NULL)
 	{
 		if (empty($key)) return false;
-
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
 			return false;
 		}
-
 		$key = (string)$key;
 		$this->readmemory();
 		if (isset($this->mem[self::map_keys][$key]))
 		{
 			return false;
 		}
-
 		return $this->save($key, $value, $ttl, $tags);
 	}
 
 	/**
 	 * Select from memory elements by function $fx
-	 * @param callback $fx
+	 * @param callable $fx
 	 * @param bool $get_array
 	 * @return mixed
 	 */
@@ -229,19 +218,16 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 	{
 		if (empty($tags)) return false;
 		if (!is_array($tags)) $tags = array($tags);
-
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
 			return false;
 		}
-
 		$this->readmemory();
 		if (empty($this->mem[self::map_key_tags]))
 		{
 			return false;
 		}
-
 		$todel = array();
 		foreach ($tags as $tag)
 		{
@@ -261,10 +247,8 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		{
 			return false;
 		}
-
 		$this->readmemory();
 		if (empty($this->mem) || empty($this->mem[self::map_key_ttl])) return false;
-
 		$t = time();
 		if (empty($this->mem[self::map_key_cleantime]) || ($t-$this->mem[self::map_key_cleantime]) > 1800)
 		{
@@ -275,7 +259,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 			$this->mem[self::map_key_cleantime] = $t;
 			$this->refresh();
 		}
-
 		return true;
 	}
 
@@ -291,9 +274,9 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 	 * Increment value of key
 	 * @param string $key
 	 * @param mixed $by_value
-	 *							  if stored value is array:
-	 *							  if $by_value is value in array, new element will be pushed to the end of array,
-	 *							  if $by_value is key=>value array, key=>value pair will be added (or updated)
+	 *                              if stored value is array:
+	 *                              if $by_value is value in array, new element will be pushed to the end of array,
+	 *                              if $by_value is key=>value array, key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
 	 * @param int $ttl
 	 * @return int|string|array new value of key
@@ -305,16 +288,14 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
-		$key = (string)$key;
+		$key           = (string)$key;
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
 			return false;
 		}
-
 		$this->readmemory();
 		if (!isset($this->mem[self::map_keys][$key])) return $this->save($key, $by_value);
-
 		$value = $this->mem[self::map_keys][$key];
 		if (is_array($value))
 		{
@@ -328,7 +309,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		{
 			$value .= $by_value;
 		}
-
 		$ttl = intval($ttl);
 		if ($ttl > 0) $this->mem[self::map_key_ttl][$key] = time()+$ttl;
 		$this->mem[self::map_keys][$key] = $value;
@@ -351,12 +331,10 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		}
 		$this->readmemory();
 		$key = (string)$key;
-
 		if (isset($this->mem[self::map_key_locks][$key]))
 		{
 			return false;
 		}
-
 		$this->mem[self::map_key_locks][$key] = 1;
 		if ($this->refresh())
 		{
@@ -381,7 +359,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 			return false;
 		}
 		$key_auto_unlocker->revoke();
-
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
 			return false;
@@ -392,7 +369,6 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 			$this->ReportError('key ['.$key.'] does not exists', __LINE__);
 			return false;
 		}
-
 		if (isset($this->mem[self::map_key_locks][$key]))
 		{
 			unset($this->mem[self::map_key_locks][$key]);

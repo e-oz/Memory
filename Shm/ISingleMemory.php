@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory\Shm;
-
 interface ISingleMemory extends \Jamm\Memory\IMemoryStorage
 {
 	public function getSingleMemory();

@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory;
-
 abstract class MemoryObject implements IMemoryStorage
 {
 	const max_ttl = 2592000;
@@ -57,7 +56,6 @@ abstract class MemoryObject implements IMemoryStorage
 	protected function incrementArray($limit_keys_count, $value, $by_value)
 	{
 		if ($limit_keys_count > 0 && (count($value) > $limit_keys_count)) $value = array_slice($value, $limit_keys_count*(-1)+1);
-
 		if (is_array($by_value))
 		{
 			$set_key = key($by_value);

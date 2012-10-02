@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory;
-
 interface IKeyLocker
 {
 	public function revoke();

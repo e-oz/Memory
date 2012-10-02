@@ -1,6 +1,6 @@
 <?php
+/** @noinspection PhpUndefinedClassInspection */
 namespace Jamm\Memory;
-
 /**
  * @method mixed DEBUG_OBJECT($key) Get debugging information about a key
  * @method mixed DEBUG_SEGFAULT() Make the server crash
@@ -435,7 +435,7 @@ interface IRedisServer
 	/**
 	 * Set multiple keys to multiple values, only if none of the keys exist
 	 * @param array $keys (key => value)
-	 * Returns:
+	 *                    Returns:
 	 * 1 if the all the keys were set.
 	 * 0 if no key was set (at least one key already existed).
 	 * @return int
@@ -677,7 +677,7 @@ interface IRedisServer
 	 * @link http://redis.io/commands/sort
 	 * @param string $key
 	 * @param string $sort_rule [BY pattern] [LIMIT offset count] [GET pattern [GET pattern ...]] [ASC|DESC] [ALPHA] [STORE destination]
-	 * Returns list of sorted elements.
+	 *                          Returns list of sorted elements.
 	 * @return array
 	 */
 	public function Sort($key, $sort_rule);
@@ -800,7 +800,7 @@ interface IRedisServer
 	 * @param array $keys
 	 * @param array|null $weights
 	 * @param string|null $aggregate see Aggregate* constants
-	 * Returns the number of elements in the resulting sorted set at destination.
+	 *                               Returns the number of elements in the resulting sorted set at destination.
 	 * @return int
 	 */
 	public function zInterStore($destination, array $keys, array $weights = null, $aggregate = null);
@@ -938,11 +938,11 @@ interface IRedisServer
 	/**
 	 * Returns all keys matching pattern.
 	 * @param string $pattern
-	 *  Supported glob-style patterns:
+	 *   Supported glob-style patterns:
 	 *   h?llo matches hello, hallo and hxllo
 	 *   h*llo matches hllo and heeeello
 	 *   h[ae]llo matches hello and hallo, but not hillo
-	 *  Use \ to escape special characters if you want to match them verbatim.
+	 *   Use \ to escape special characters if you want to match them verbatim.
 	 * @return array
 	 */
 	public function Keys($pattern);

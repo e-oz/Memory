@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory;
-
 class RedisObject extends MemoryObject implements IMemoryStorage
 {
 	const lock_key_prefix = '.lock_key.';
@@ -64,10 +63,10 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $key			- key
-	 * @param mixed $value		   - value
-	 * @param int $ttl			   - time to live (store) in seconds
-	 * @param array|string $tags	 - array of tags for this key
+	 * @param string $key            - key
+	 * @param mixed $value           - value
+	 * @param int $ttl               - time to live (store) in seconds
+	 * @param array|string $tags     - array of tags for this key
 	 * @return bool
 	 */
 	public function save($key, $value, $ttl = 259200, $tags = NULL)
@@ -148,7 +147,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 
 	/**
 	 * Select from storage via callback function
-	 * @param callback $fx ($value, $key) - should return true to select key(s)
+	 * @param callable $fx ($value, $key) - should return true to select key(s)
 	 * @param bool $get_array
 	 * @return mixed
 	 */
@@ -177,11 +176,11 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 * Increment value of the key
 	 * @param string $key
 	 * @param mixed $by_value
-	 *							  if stored value is an array:
-	 *							  if $by_value is a value in array, new element will be pushed to the end of array,
-	 *							  if $by_value is a key=>value array, new key=>value pair will be added (or updated)
+	 *                              if stored value is an array:
+	 *                              if $by_value is a value in array, new element will be pushed to the end of array,
+	 *                              if $by_value is a key=>value array, new key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
-	 * @param int $ttl			  - set time to live for key
+	 * @param int $ttl              - set time to live for key
 	 * @return int|string|array new value of key
 	 */
 	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200)
@@ -191,12 +190,9 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
-
 		if (!$this->acquire_key($key, $auto_unlocker)) return false;
-
 		$value = $this->read($key);
 		if ($value===null || $value===false) return $this->save($key, $by_value, $ttl);
-
 		if (is_array($value))
 		{
 			$value = $this->incrementArray($limit_keys_count, $value, $by_value);
@@ -209,7 +205,6 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		{
 			$value .= $by_value;
 		}
-
 		if ($this->save($key, $value, $ttl)) return $value;
 		else return false;
 	}

@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory;
-
 class MemcachedDecorator implements IMemcacheDecorator
 {
 	/** @var \Memcached */

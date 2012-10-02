@@ -1,6 +1,5 @@
 <?php
 namespace Jamm\Memory;
-
 class APCObject extends MemoryObject implements IMemoryStorage
 {
 	protected $prefix = 'K'; //because I love my wife Katya :)
@@ -41,7 +40,6 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
-
 		$add = apc_add($this->prefix.$k, $v, intval($ttl));
 		if (!$add)
 		{
@@ -81,7 +79,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 *
 	 * @param string $k
 	 * @param mixed $v
-	 * @param int $ttl		   - time to live (store) in seconds
+	 * @param int $ttl           - time to live (store) in seconds
 	 * @param array|string $tags - array of tags for this key
 	 * @return bool
 	 */
@@ -92,20 +90,17 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
-
 		static $cleaned = false;
 		if (!$cleaned)
 		{
 			$this->del_old_cached();
 			$cleaned = true;
 		}
-
 		if (!apc_store($this->prefix.$k, $v, intval($ttl)))
 		{
 			$this->ReportError('apc can not store key', __LINE__);
 			return false;
 		}
-
 		if (!empty($tags)) $this->set_tags($k, $tags, $ttl);
 		return true;
 	}
@@ -200,7 +195,6 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
-
 		if (is_array($k))
 		{
 			$todel = array();
@@ -237,7 +231,6 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		{
 			$apc_ttl = $apc_user_info['ttl']/2;
 		}
-
 		$i = new \APCIterator('user', null, APC_ITER_TTL+APC_ITER_KEY+APC_ITER_CTIME+APC_ITER_ATIME);
 		foreach ($i as $key)
 		{
@@ -267,7 +260,6 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			$check_period = $apc_ttl;
 		}
 		if (empty($check_period) || $check_period > 1800) $check_period = 1800;
-
 		$ittl              = new \APCIterator('user', '/^'.preg_quote($this->defragmentation_prefix).'$/', APC_ITER_ATIME, 1);
 		$cttl              = $ittl->current();
 		$previous_cleaning = $cttl[self::apc_arr_atime];
@@ -288,7 +280,6 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	public function del_by_tags($tags)
 	{
 		if (!is_array($tags)) $tags = array($tags);
-
 		$todel = array();
 		$l     = strlen($this->tags_prefix);
 		$i     = new \APCIterator('user', '/^'.preg_quote($this->tags_prefix).'/', APC_ITER_KEY+APC_ITER_VALUE);
@@ -300,7 +291,6 @@ class APCObject extends MemoryObject implements IMemoryStorage
 				if (!empty($intersect)) $todel[] = substr($key_tags[self::apc_arr_key], $l);
 			}
 		}
-
 		if (!empty($todel)) return $this->del($todel);
 		return true;
 	}
@@ -308,7 +298,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Select from storage via callback function
 	 *
-	 * @param callback $fx ($value_array,$key)
+	 * @param callable $fx ($value_array,$key)
 	 * @param bool $get_array
 	 * @return mixed
 	 */
@@ -322,7 +312,6 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			if (!is_array($item[self::apc_arr_value])) continue;
 			$s     = $item[self::apc_arr_value];
 			$index = substr($item[self::apc_arr_key], $l);
-
 			if ($fx($s, $index)===true)
 			{
 				if (!$get_array) return $s;
@@ -337,11 +326,11 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 * Increment value of the key
 	 * @param string $key
 	 * @param mixed $by_value
-	 *							  if stored value is an array:
-	 *							  if $by_value is a value in array, new element will be pushed to the end of array,
-	 *							  if $by_value is a key=>value array, new key=>value pair will be added (or updated)
+	 *                              if stored value is an array:
+	 *                              if $by_value is a value in array, new element will be pushed to the end of array,
+	 *                              if $by_value is a key=>value array, new key=>value pair will be added (or updated)
 	 * @param int $limit_keys_count - maximum count of elements (used only if stored value is array)
-	 * @param int $ttl			  - set time to live for key
+	 * @param int $ttl              - set time to live for key
 	 * @return int|string|array new value of key
 	 */
 	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200)
@@ -351,9 +340,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
-
 		if (!$this->acquire_key($key, $auto_unlocker)) return false;
-
 		$value = apc_fetch($this->prefix.$key, $success);
 		if (!$success)
 		{
@@ -421,7 +408,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	{
 		return array(
 			'system' => apc_cache_info('', true),
-			'user' => apc_cache_info('user', true)
+			'user'   => apc_cache_info('user', true)
 		);
 	}
 
