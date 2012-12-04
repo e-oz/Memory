@@ -1,0 +1,31 @@
+{
+	"name": "jamm/memory",
+	"require": {
+		"php": ">=5.3.0"
+	},
+	"suggest": {
+		"jamm/tester": "allows to run unit-tests"
+	},
+	"description": "Key-value storage in memory. As a storage can be used: APC, Redis, Memcache, Shared memory.	All storage objects have one interface, so you can switch them without changing the working code. Contains PHP Redis client.",
+	"version": "1.0.0",
+	"keywords": ["caching", "race-condition", "dog-pile", "redis", "memcached", "apc", "memory", "shared memory"],
+	"support": {
+		"email": "normandiggs@gmail.com",
+		"source": "https://github.com/jamm/Memory"
+	},
+	"autoload": {
+		"psr-0": {
+			"Jamm\\Memory": ""
+		}
+	},
+	"type": "library",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Eugene OZ",
+			"email": "normandiggs@gmail.com",
+			"homepage": "https://github.com/jamm/",
+			"role": "Developer"
+		}
+	]
+}
