@@ -5,40 +5,40 @@ interface IMemoryStorage
 	/**
 	 * Add value to memory storage, only if this key does not exists (or false will be returned).
 	 *
-	 * @param string $k
-	 * @param mixed $v
+	 * @param string $key
+	 * @param mixed $value
 	 * @param int $ttl
 	 * @param array|string $tags
 	 * @return boolean
 	 */
-	public function add($k, $v, $ttl = 259200, $tags = NULL);
+	public function add($key, $value, $ttl = 259200, $tags = NULL);
 
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k          - key
-	 * @param mixed $v           - value
+	 * @param string $key          - key
+	 * @param mixed $value           - value
 	 * @param int $ttl           - time to live (store) in seconds
 	 * @param array|string $tags - array of tags for this key
 	 * @return bool
 	 */
-	public function save($k, $v, $ttl = 259200, $tags = NULL);
+	public function save($key, $value, $ttl = 259200, $tags = NULL);
 
 	/**
 	 * Read data from memory storage
 	 *
-	 * @param string|array $k (string or array of string keys)
+	 * @param string|array $key (string or array of string keys)
 	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
 	 * @return mixed
 	 */
-	public function read($k, &$ttl_left = -1);
+	public function read($key, &$ttl_left = -1);
 
 	/**
 	 * Delete key or array of keys from storage
-	 * @param string|array $k - keys
+	 * @param string|array $key - keys
 	 * @return boolean|array - if array of keys was passed, on error will be returned array of not deleted keys, or 'true' on success.
 	 */
-	public function del($k);
+	public function del($key);
 
 	/**
 	 * Delete old (by ttl) variables from storage

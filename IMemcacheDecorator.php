@@ -15,4 +15,6 @@ interface IMemcacheDecorator
 	public function connect($host = 'localhost', $port = 11211);
 
 	public function getStats();
+	
+	public function decrement($key, $by_value);
 }

@@ -35,31 +35,31 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	/**
 	 * Add value to memory storage, only if this key does not exists (or false will be returned).
 	 *
-	 * @param string $k          key
-	 * @param mixed $v           value
+	 * @param string $key          key
+	 * @param mixed $value           value
 	 * @param integer $ttl       Time To Live in seconds (value will be added to the current time)
 	 * @param array|string $tags tag array of tags for this key
 	 * @return bool
 	 */
-	public function add($k, $v, $ttl = 259200, $tags = NULL)
+	public function add($key, $value, $ttl = 259200, $tags = NULL)
 	{
-		if (empty($k) || $v==NULL)
+		if (empty($key) || $value==NULL)
 		{
 			$this->ReportError('empty keys and values are not allowed', __LINE__);
 			return false;
 		}
-		$k             = (string)$k;
+		$key             = (string)$key;
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
 			return false;
 		}
 		$map = $this->mem_object->read('map');
-		if (isset($map[$k]))
+		if (isset($map[$key]))
 		{
 			return false;
 		}
-		return $this->save($k, $v, $ttl, $tags);
+		return $this->save($key, $value, $ttl, $tags);
 	}
 
 	/**
@@ -88,20 +88,20 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k          key
-	 * @param mixed $v           value
+	 * @param string $key          key
+	 * @param mixed $value           value
 	 * @param integer $ttl       Time To Live in seconds (value will be added to the current time)
 	 * @param string|array $tags tag array of tags for this key
 	 * @return bool
 	 */
-	public function save($k, $v, $ttl = 259200, $tags = NULL)
+	public function save($key, $value, $ttl = 259200, $tags = NULL)
 	{
-		if (empty($k) || $v===NULL)
+		if (empty($key) || $value===NULL)
 		{
 			$this->ReportError('empty key and null value are not allowed', __LINE__);
 			return false;
 		}
-		$k             = (string)$k;
+		$key             = (string)$key;
 		$auto_unlocker = NULL;
 		if (!$this->mutex->get_access_write($auto_unlocker))
 		{
@@ -109,16 +109,16 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		}
 		$map             = $this->mem_object->read('map');
 		$data_serialized = 0;
-		if (!is_scalar($v))
+		if (!is_scalar($value))
 		{
-			$v               = serialize($v);
+			$value               = serialize($value);
 			$data_serialized = 1;
 		}
-		$size = strlen($v);
+		$size = strlen($value);
 		if (empty($map)) $start = 0;
 		else
 		{
-			if (!array_key_exists($k, $map))
+			if (!array_key_exists($key, $map))
 			{
 				$start = $this->find_free_space($map, $size);
 				if ($start===false)
@@ -129,10 +129,10 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			}
 			else
 			{
-				if ($size <= ($map[$k][self::map_key_fin]-$map[$k][self::map_key_start])) $start = $map[$k][self::map_key_start];
+				if ($size <= ($map[$key][self::map_key_fin]-$map[$key][self::map_key_start])) $start = $map[$key][self::map_key_start];
 				else
 				{
-					$this->del($k);
+					$this->del($key);
 					$this->del_old();
 					$map   = $this->mem_object->read('map');
 					$start = $this->find_free_space($map, $size);
@@ -144,15 +144,15 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 				}
 			}
 		}
-		$r = $this->write_data($v, $start);
+		$r = $this->write_data($value, $start);
 		if ($r===false) return false;
 		$set_ttl = 0;
 		$ttl     = intval($ttl);
 		if ($ttl > self::max_ttl) $ttl = self::max_ttl;
 		if ($ttl > 0) $set_ttl = time()+$ttl;
-		$map[$k] = array(self::map_key_start => $start, self::map_key_fin => ($start+$size));
-		if ($set_ttl > 0) $map[$k][self::map_key_ttl] = $set_ttl;
-		if ($data_serialized) $map[$k][self::map_key_serialized] = $data_serialized;
+		$map[$key] = array(self::map_key_start => $start, self::map_key_fin => ($start+$size));
+		if ($set_ttl > 0) $map[$key][self::map_key_ttl] = $set_ttl;
+		if ($data_serialized) $map[$key][self::map_key_serialized] = $data_serialized;
 		$r = $this->mem_object->save('map', $map);
 		if ($r===false)
 		{
@@ -166,9 +166,9 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			$mem_tags         = $this->mem_object->read('tags');
 			foreach ($tags as $tag)
 			{
-				if (empty($mem_tags[$tag]) || !in_array($k, $mem_tags[$tag]))
+				if (empty($mem_tags[$tag]) || !in_array($key, $mem_tags[$tag]))
 				{
-					$mem_tags[$tag][] = $k;
+					$mem_tags[$tag][] = $key;
 					$tags_was_changed = true;
 				}
 			}
@@ -222,13 +222,13 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	/**
 	 * Read data from memory storage
 	 *
-	 * @param string|array $k key or array of keys
+	 * @param string|array $key key or array of keys
 	 * @param int $ttl_left   = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
 	 * @return mixed
 	 */
-	public function read($k, &$ttl_left = -1)
+	public function read($key, &$ttl_left = -1)
 	{
-		if (empty($k))
+		if (empty($key))
 		{
 			$this->ReportError('empty key are not allowed', __LINE__);
 			return NULL;
@@ -244,25 +244,25 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			$this->ReportError('map are empty', __LINE__);
 			return NULL;
 		}
-		if (is_array($k))
+		if (is_array($key))
 		{
 			$todelete    = array();
 			$from_points = array();
 			$to_points   = array();
-			foreach ($k as $key)
+			foreach ($key as $arr_key)
 			{
-				$key = (string)$key;
-				if (!array_key_exists($key, $map)) continue;
-				if (!empty($map[$key][self::map_key_ttl]) && $map[$key][self::map_key_ttl] < time())
+				$arr_key = (string)$arr_key;
+				if (!array_key_exists($arr_key, $map)) continue;
+				if (!empty($map[$arr_key][self::map_key_ttl]) && $map[$arr_key][self::map_key_ttl] < time())
 				{
-					$todelete[] = $key;
+					$todelete[] = $arr_key;
 					continue;
 				}
-				$from_points[] = $map[$key][self::map_key_start];
-				$to_points[]   = $map[$key][self::map_key_fin];
+				$from_points[] = $map[$arr_key][self::map_key_start];
+				$to_points[]   = $map[$arr_key][self::map_key_fin];
 			}
 			if (!empty($todelete)) $this->del($todelete);
-			$data = $this->read_data($from_points, $to_points, $k);
+			$data = $this->read_data($from_points, $to_points, $key);
 			if (!empty($data))
 			{
 				foreach ($data as $key => &$value)
@@ -281,25 +281,25 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 		}
 		else
 		{
-			$k = (string)$k;
-			if (!array_key_exists($k, $map))
+			$key = (string)$key;
+			if (!array_key_exists($key, $map))
 			{
 				return NULL;
 			}
 			$ttl_left = self::max_ttl;
-			if (!empty($map[$k][self::map_key_ttl]))
+			if (!empty($map[$key][self::map_key_ttl]))
 			{
-				$ttl_left = $map[$k][self::map_key_ttl]-time();
+				$ttl_left = $map[$key][self::map_key_ttl]-time();
 				if ($ttl_left <= 0)
 				{
-					$this->del($k);
+					$this->del($key);
 					return NULL;
 				}
 			}
-			$from = $map[$k][self::map_key_start];
-			$to   = $map[$k][self::map_key_fin];
+			$from = $map[$key][self::map_key_start];
+			$to   = $map[$key][self::map_key_fin];
 			$data = $this->read_data($from, $to);
-			if ($map[$k][self::map_key_serialized]==1) $data = unserialize($data);
+			if ($map[$key][self::map_key_serialized]==1) $data = unserialize($data);
 			else
 			{
 				if (is_numeric($data))
@@ -364,12 +364,12 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	/**
 	 * Delete key or array of keys from storage (from map)
 	 *
-	 * @param string|array $k key or array of keys
+	 * @param string|array $key key or array of keys
 	 * @return boolean
 	 */
-	public function del($k)
+	public function del($key)
 	{
-		if ($k==NULL || $k=='')
+		if ($key==NULL || $key=='')
 		{
 			$this->ReportError('Can not delete empty key', __LINE__);
 			return false;
@@ -380,18 +380,18 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 			return false;
 		}
 		$map = $this->mem_object->read('map');
-		if (is_array($k))
+		if (is_array($key))
 		{
-			foreach ($k as $key)
+			foreach ($key as $arr_key)
 			{
-				$key = (string)$key;
-				unset($map[$key]);
+				$arr_key = (string)$arr_key;
+				unset($map[$arr_key]);
 			}
 		}
 		else
 		{
-			$k = (string)$k;
-			unset($map[$k]);
+			$key = (string)$key;
+			unset($map[$key]);
 		}
 		$r = $this->mem_object->save('map', $map);
 		if ($r===false)
@@ -573,6 +573,7 @@ class SHMObject extends \Jamm\Memory\MemoryObject implements \Jamm\Memory\IMemor
 	 * and Process 2 can decide, what he want to do - use old value and not spent time to database, or something else.
 	 * @param mixed $key
 	 * @param mixed $auto_unlocker_variable - pass empty, just declared variable
+	 * @return bool
 	 */
 	public function lock_key($key, &$auto_unlocker_variable)
 	{

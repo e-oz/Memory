@@ -27,29 +27,24 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Add value to memory storage, only if this key does not exists (or false will be returned).
 	 *
-	 * @param string $k
-	 * @param mixed $v
+	 * @param string $key
+	 * @param mixed $value
 	 * @param int $ttl
 	 * @param array|string $tags
 	 * @return boolean
 	 */
-	public function add($k, $v, $ttl = 259200, $tags = NULL)
+	public function add($key, $value, $ttl = 259200, $tags = NULL)
 	{
-		if (empty($k))
-		{
-			$this->ReportError('empty keys are not allowed', __LINE__);
-			return false;
-		}
-		$add = apc_add($this->prefix.$k, $v, intval($ttl));
+		$add = apc_add($this->prefix.$key, $value, intval($ttl));
 		if (!$add)
 		{
-			if (!apc_exists($this->prefix.$k))
+			if (!apc_exists($this->prefix.$key))
 			{
 				$this->ReportError('Can not add non existing key', __LINE__);
 			}
 			return false;
 		}
-		if (!empty($tags)) $this->set_tags($k, $tags, $ttl);
+		if (!empty($tags)) $this->set_tags($key, $tags, $ttl);
 		return true;
 	}
 
@@ -77,31 +72,26 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $k
-	 * @param mixed $v
+	 * @param string $key
+	 * @param mixed $value
 	 * @param int $ttl           - time to live (store) in seconds
 	 * @param array|string $tags - array of tags for this key
 	 * @return bool
 	 */
-	public function save($k, $v, $ttl = 259200, $tags = NULL)
+	public function save($key, $value, $ttl = 259200, $tags = NULL)
 	{
-		if (empty($k))
-		{
-			$this->ReportError('empty keys are not allowed', __LINE__);
-			return false;
-		}
 		static $cleaned = false;
 		if (!$cleaned)
 		{
 			$this->del_old_cached();
 			$cleaned = true;
 		}
-		if (!apc_store($this->prefix.$k, $v, intval($ttl)))
+		if (!apc_store($this->prefix.$key, $value, intval($ttl)))
 		{
 			$this->ReportError('apc can not store key', __LINE__);
 			return false;
 		}
-		if (!empty($tags)) $this->set_tags($k, $tags, $ttl);
+		if (!empty($tags)) $this->set_tags($key, $tags, $ttl);
 		return true;
 	}
 
@@ -122,48 +112,43 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	/**
 	 * Read data from memory storage
 	 *
-	 * @param string|array $k (string or array of string keys)
+	 * @param string|array $key (string or array of string keys)
 	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
 	 * @return mixed
 	 */
-	public function read($k, &$ttl_left = -1)
+	public function read($key, &$ttl_left = -1)
 	{
-		if (empty($k))
-		{
-			$this->ReportError('empty keys are not allowed', __LINE__);
-			return NULL;
-		}
-		if (is_array($k))
+		if (is_array($key))
 		{
 			$data       = array();
 			$return_ttl = ($ttl_left!==-1 ? true : false);
 			$ttl_left   = array();
-			foreach ($k as $key)
+			foreach ($key as $arr_key)
 			{
-				$key        = (string)$key;
-				$data[$key] = apc_fetch($this->prefix.$key, $success);
+				$arr_key        = (string)$arr_key;
+				$data[$arr_key] = apc_fetch($this->prefix.$arr_key, $success);
 				if (!$success)
 				{
-					unset($data[$key]);
+					unset($data[$arr_key]);
 					continue;
 				}
-				if ($return_ttl) $ttl_left[$key] = $this->getKeyTTL($key);
+				if ($return_ttl) $ttl_left[$arr_key] = $this->getKeyTTL($arr_key);
 			}
 		}
 		else
 		{
-			$data = apc_fetch($this->prefix.$k, $success);
+			$data = apc_fetch($this->prefix.$key, $success);
 			if (!$success)
 			{
-				if (apc_exists($this->prefix.$k))
+				if (apc_exists($this->prefix.$key))
 				{
-					$this->ReportError('apc can not fetch key '.$k, __LINE__);
+					$this->ReportError('apc can not fetch key '.$key, __LINE__);
 				}
 				return false;
 			}
 			if ($ttl_left!==-1)
 			{
-				$ttl_left = $this->getKeyTTL($k);
+				$ttl_left = $this->getKeyTTL($key);
 				if ($ttl_left < 0) $data = false; //key expired
 			}
 		}
@@ -185,24 +170,19 @@ class APCObject extends MemoryObject implements IMemoryStorage
 
 	/**
 	 * Delete key or array of keys from storage
-	 * @param string|array $k
+	 * @param string|array $key
 	 * @return boolean
 	 */
-	public function del($k)
+	public function del($key)
 	{
-		if (empty($k))
-		{
-			$this->ReportError('empty keys are not allowed', __LINE__);
-			return false;
-		}
-		if (is_array($k))
+		if (is_array($key))
 		{
 			$todel = array();
-			foreach ($k as $key)
+			foreach ($key as $arr_key)
 			{
-				$todel[] = $this->prefix.$key;
-				if (\apc_exists($this->tags_prefix.$key)) $todel[] = $this->tags_prefix.$key;
-				if (\apc_exists($this->lock_key_prefix.$key)) $todel[] = $this->lock_key_prefix.$key;
+				$todel[] = $this->prefix.$arr_key;
+				if (\apc_exists($this->tags_prefix.$arr_key)) $todel[] = $this->tags_prefix.$arr_key;
+				if (\apc_exists($this->lock_key_prefix.$arr_key)) $todel[] = $this->lock_key_prefix.$arr_key;
 			}
 			$r = apc_delete($todel);
 			if (empty($r)) return true;
@@ -210,9 +190,9 @@ class APCObject extends MemoryObject implements IMemoryStorage
 		}
 		else
 		{
-			if (\apc_exists($this->tags_prefix.$k)) apc_delete($this->tags_prefix.$k);
-			if (\apc_exists($this->lock_key_prefix.$k)) apc_delete($this->lock_key_prefix.$k);
-			return apc_delete($this->prefix.$k);
+			if (\apc_exists($this->tags_prefix.$key)) apc_delete($this->tags_prefix.$key);
+			if (\apc_exists($this->lock_key_prefix.$key)) apc_delete($this->lock_key_prefix.$key);
+			return apc_delete($this->prefix.$key);
 		}
 	}
 
@@ -335,11 +315,6 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function increment($key, $by_value = 1, $limit_keys_count = 0, $ttl = 259200)
 	{
-		if (empty($key))
-		{
-			$this->ReportError('empty keys are not allowed', __LINE__);
-			return false;
-		}
 		if (!$this->acquire_key($key, $auto_unlocker)) return false;
 		$value = apc_fetch($this->prefix.$key, $success);
 		if (!$success)

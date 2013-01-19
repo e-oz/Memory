@@ -16,20 +16,20 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 	const map_key_cleantime   = 'clean';
 
 	/**
-	 * @param string $k key
-	 * @param mixed $v  value
+	 * @param string $key key
+	 * @param mixed $value  value
 	 * @param int $ttl  time to live
 	 * @param string|array $tags
 	 * @return bool|void
 	 */
-	public function save($k, $v, $ttl = 2592000, $tags = NULL)
+	public function save($key, $value, $ttl = 2592000, $tags = NULL)
 	{
-		if (empty($k) || $v===NULL)
+		if (empty($key) || $value===NULL)
 		{
 			$this->ReportError('empty keys and null values are not allowed', __LINE__);
 			return false;
 		}
-		$k             = (string)$k;
+		$key             = (string)$key;
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
 		{
@@ -37,18 +37,18 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		}
 		$this->del_old();
 		$this->readmemory();
-		$this->mem[self::map_keys][$k] = $v;
+		$this->mem[self::map_keys][$key] = $value;
 		$ttl                           = intval($ttl);
-		if ($ttl > 0) $this->mem[self::map_key_ttl][$k] = time()+$ttl;
+		if ($ttl > 0) $this->mem[self::map_key_ttl][$key] = time()+$ttl;
 		if (!empty($tags))
 		{
 			if (!is_array($tags)) $tags = array($tags);
 			foreach ($tags as $tag)
 			{
 				if (empty($this->mem[self::map_key_tags][$tag])
-						|| !in_array($k, $this->mem[self::map_key_tags][$tag])
+						|| !in_array($key, $this->mem[self::map_key_tags][$tag])
 				)
-					$this->mem[self::map_key_tags][$tag][] = $k;
+					$this->mem[self::map_key_tags][$tag][] = $key;
 			}
 		}
 		return $this->refresh();
@@ -56,24 +56,24 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 
 	/**
 	 * Read key value from memory
-	 * @param string|array $k
+	 * @param string|array $key
 	 * @param $ttl_left
 	 * @return mixed
 	 */
-	public function read($k, &$ttl_left = -1)
+	public function read($key, &$ttl_left = -1)
 	{
-		if (empty($k))
+		if (empty($key))
 		{
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
 		$this->readmemory();
 		if (empty($this->mem)) return false;
-		if (is_array($k))
+		if (is_array($key))
 		{
 			$keys     = array();
 			$ttl_left = array();
-			foreach ($k as $ki)
+			foreach ($key as $ki)
 			{
 				$ki = (string)$ki;
 				if (!isset($this->mem[self::map_keys][$ki])) continue;
@@ -93,9 +93,9 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		}
 		else
 		{
-			$k        = (string)$k;
-			$r        = $this->mem[self::map_keys][$k];
-			$ttl_left = $this->get_key_ttl($k, $this->mem);
+			$key        = (string)$key;
+			$r        = $this->mem[self::map_keys][$key];
+			$ttl_left = $this->get_key_ttl($key, $this->mem);
 			if ($ttl_left <= 0) $r = NULL;
 			else
 			{
@@ -121,10 +121,10 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 
 	/**
 	 * Delete key from memory
-	 * @param string $k
+	 * @param string $key
 	 * @return bool
 	 */
-	public function del($k)
+	public function del($key)
 	{
 		$auto_unlocker = NULL;
 		if (!$this->sem->get_access_write($auto_unlocker))
@@ -136,17 +136,17 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 		{
 			return false;
 		}
-		if (!is_array($k)) $k = array($k);
-		foreach ($k as $key)
+		if (!is_array($key)) $key = array($key);
+		foreach ($key as $arr_key)
 		{
-			$key = (string)$key;
-			unset($this->mem[self::map_keys][$key]);
-			unset($this->mem[self::map_key_ttl][$key]);
+			$arr_key = (string)$arr_key;
+			unset($this->mem[self::map_keys][$arr_key]);
+			unset($this->mem[self::map_key_ttl][$arr_key]);
 			if (!empty($this->mem[self::map_key_tags]))
 			{
 				foreach ($this->mem[self::map_key_tags] as $tag_index => &$tag)
 				{
-					$indexes = array_keys($tag, $key);
+					$indexes = array_keys($tag, $arr_key);
 					if (!empty($indexes))
 					{
 						foreach ($indexes as $index) unset($tag[$index]);
@@ -154,7 +154,7 @@ abstract class SingleMemory extends \Jamm\Memory\MemoryObject implements ISingle
 					}
 				}
 			}
-			unset($this->mem[self::map_key_locks][$key]);
+			unset($this->mem[self::map_key_locks][$arr_key]);
 		}
 		return $this->refresh();
 	}

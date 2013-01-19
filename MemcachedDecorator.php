@@ -44,4 +44,9 @@ class MemcachedDecorator implements IMemcacheDecorator
 	{
 		return $this->memcached->getStats();
 	}
+
+	public function decrement($key, $by_value)
+	{
+		return $this->memcached->decrement($key, $by_value);
+	}
 }
