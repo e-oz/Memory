@@ -108,10 +108,10 @@ If you can't install any third-party packages, you can use **Shared Memory** - b
 ##Performance comparison
 + **APC** - best performance, let speed result of APC in benchmark is 1.
 + **PhpRedis** - speed 1.23
-+ **Redis** - speed 1.6    
-+ **Couchbase** - speed 57
-+ **Shared memory** - speed 130
-+ **Memcache** - speed 192 (slowest)  
++ **Redis** - speed 1.6
++ **Memcache** - speed 120
++ **Couchbase** - speed 137
++ **Shared memory** - speed 130   
 
 
 Tests:
