@@ -100,18 +100,10 @@ Should be used only in specific cases (e.g. mutexes), or when other extensions c
 
 #Storages comparison:
 **APC** is a very fast and easy to use storage, use it when RAM on app-server is enough for caching.
-If APC can not be used for caching data, or you just like Redis - use **Redis**.
+If APC can not be used for caching data, or you just like Redis - use **Redis**.  
 Redis and Memcache can be used for cross-process communication. Also, data in Redis storage will be restored even after server reboot.
 Don't want to install Redis (it's just 1 line in console :))? Use **Memcache**.
 If you can't install any third-party packages, you can use **Shared Memory** - but your PHP should be compiled with support of shmop-functions.
-
-##Performance comparison
-+ **APC** - best performance, let speed result of APC in benchmark is 1.
-+ **PhpRedis** - speed 1.23
-+ **Redis** - speed 1.6
-+ **Memcache** - speed 120
-+ **Couchbase** - speed 137
-+ **Shared memory** - speed 130   
 
 
 Tests:
