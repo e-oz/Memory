@@ -1,6 +1,6 @@
 PHP Memory Cacher
 =================
-##Key-value storage in memory
+#Key-value storage in memory
 As a storage can be used:
 
  * [APC](http://pecl.php.net/package/APC)
@@ -11,7 +11,7 @@ As a storage can be used:
  
 All storage objects have one interface, so you can switch them without changing the working code.
 
-##Features:
+#Features:
 + Tags for keys
 + "Dog-pile" ("cache miss storm") and "race condition" effects are excluded
 + Lock, unlock or acquire key just by one command
@@ -21,7 +21,7 @@ All storage objects have one interface, so you can switch them without changing 
 + Increment() method can work with arrays, strings and numeric values
 + MultiAccess class can be used for any resource, to create an access model *one write multiple read*
 
-##Usage:
+#Usage:
 See [demo.php](https://github.com/jamm/Memory/blob/master/demo.php) to get examples of code.  
 
 You can use MemoryObjects (RedisObject, CouchbaseObject, APCObject, MemcacheObject, SHMObject) as usual key-value storage: get/set/delete.    
@@ -70,31 +70,32 @@ Example in code:
 To avoid the "Dog-pile" effect ("cache miss storm", "cache stampede"), we can use second argument of method read() - when time of expiration is near, we can try to lock key, and if key was locked - update value.   
 See example in [demo.php](https://github.com/jamm/Memory/blob/master/demo.php).    
 
-##Requirements:
+#Requirements:
 You can use each storage separately, requirements are individually for storages
 
 ###PHP version: 5.3+
 
-###For APCObject:
+##For APCObject:
 [APC](http://pecl.php.net/package/APC) should be installed, and this setting should be added in php.ini (or apc.ini if you use it)
 
 + apc.slam_defense = Off
 + __recommended:__ apc.user_ttl = 0
 
-###For Memcache:
+##For Memcache:
 [Memcache](http://pecl.php.net/package/memcache) or [Memcached](http://pecl.php.net/package/memcached) PHP extension should be installed.  
 Memcache is not the fastest and most secure storage, so use it only when necessary. [Read more](http://code.google.com/p/memcached/wiki/WhyNotMemcached)
 
-###For Redis:
+##For Redis:
 [Redis](http://redis.io) server should be installed (in debian/ubuntu: "apt-get install redis-server").  
 Supported version is 2.6.9 and below.
 Also, [phpredis](https://github.com/nicolasff/phpredis) (if installed) can be used as client library - just use `PhpRedisObject` instead of default `RedisObject`.
 
 ##For Couchbase:
-Installed [Couchbase PHP SDK](http://www.couchbase.com/develop/php/current)  
+Installed [Couchbase PHP SDK](http://www.couchbase.com/develop/php/current)    
+[Couchbase Server 2.0](http://www.couchbase.com/download)  
+Use few nodes if you need fault-tolerance.  
 
-
-###For SHMObject and MultiAccess:
+##For SHMObject and MultiAccess:
 PHP should support shm-functions and msg-functions (--enable-shmop --enable-sysvsem --enable-sysvshm --enable-sysvmsg)  
 Should be used only in specific cases (e.g. mutexes), or when other extensions can not be installed.
 
