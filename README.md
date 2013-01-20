@@ -99,12 +99,11 @@ PHP should support shm-functions and msg-functions (--enable-shmop --enable-sysv
 Should be used only in specific cases (e.g. mutexes), or when other extensions can not be installed.
 
 #Storages comparison:
-**APC** is a very fast and easy to use storage, use it when RAM on app-server is enough for caching.
-If APC can not be used for caching data, or you just like Redis - use **Redis**.  
-Redis and Memcache can be used for cross-process communication. Also, data in Redis storage will be restored even after server reboot.
-Don't want to install Redis (it's just 1 line in console :))? Use **Memcache**.
-If you can't install any third-party packages, you can use **Shared Memory** - but your PHP should be compiled with support of shmop-functions.
-
+**APC** is a very fast and easy to use storage, use it when RAM on app-server is enough for caching.  
+If APC can not be used for caching data, or you just like Redis - use **Redis**.    
+Use **Couchbase** if you need fault-tolerant and very easy scalable cluster.   
+Redis, Couchbase and **Memcache(d)** can be used for cross-process communication. Also, data in Redis and Couchbase storages will be restored even after server reboot.     
+If you can't install any third-party packages, you can use **Shared Memory** - but your PHP should be compiled with support of shmop-functions.  
 
 Tests:
 =====
