@@ -990,7 +990,7 @@ class RedisServer implements IRedisServer
 	 */
 	public function BITCOUNT($key, $start = 0, $end = 0)
 	{
-		if ($start > 0)
+		if ($start > 0 || $end > 0)
 		{
 			return $this->_send(array('BITCOUNT', $key, $start, $end));
 		}
@@ -1015,7 +1015,9 @@ class RedisServer implements IRedisServer
 	 */
 	public function BITOP($operation, $destkey, $key)
 	{
-		return $this->_send(array('BITOP', func_get_args()));
+		$args = func_get_args();
+		array_unshift($args, 'BITOP');
+		return $this->_send($args);
 	}
 
 	/**

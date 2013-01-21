@@ -1,14 +1,18 @@
 <?php
 namespace Jamm\Memory\Tests;
+use Jamm\Memory\IRedisServer;
+
 class TestRedisServer extends \Jamm\Tester\ClassTest
 {
 	/** @var \Jamm\Memory\Tests\MockRedisServer */
 	protected $redis;
 	protected $results = array();
+	protected $Server;
 
-	public function __construct()
+	public function __construct(IRedisServer $Server)
 	{
-		$this->redis = new MockRedisServer();
+		$this->redis  = new MockRedisServer();
+		$this->Server = $Server;
 	}
 
 	public function test_Append()
@@ -603,6 +607,199 @@ class TestRedisServer extends \Jamm\Tester\ClassTest
 	public function test_info()
 	{
 		$this->assertEquals('info', $this->redis->info());
+	}
+
+	public function test_SYNC()
+	{
+		$this->assertEquals("sync", $this->redis->SYNC());
+	}
+
+	public function test_SRANDMEMBER()
+	{
+		$this->assertEquals("srandmember key 1", $this->redis->SRANDMEMBER("key", 1));
+	}
+
+	public function test_SPOP()
+	{
+		$this->assertEquals("spop key", $this->redis->SPOP("key"));
+	}
+
+	public function test_SLOWLOG()
+	{
+		$this->assertEquals("slowlog subcommand argument", $this->redis->SLOWLOG("subcommand", "argument"));
+	}
+
+	public function test_SHUTDOWN()
+	{
+		$this->assertEquals("shutdown", $this->redis->SHUTDOWN());
+		$this->assertEquals("shutdown save", $this->redis->SHUTDOWN(true));
+		$this->assertEquals("shutdown nosave", $this->redis->SHUTDOWN(false, true));
+		$this->assertEquals("shutdown save", $this->redis->SHUTDOWN(true, true));
+	}
+
+	public function test_SAVE()
+	{
+		$this->assertEquals("save", $this->redis->SAVE());
+	}
+
+	public function test_RANDOMKEY()
+	{
+		$this->assertEquals("randomkey", $this->redis->RANDOMKEY());
+	}
+
+	public function test_OBJECT()
+	{
+		$this->assertEquals("object subcommand arguments z", $this->redis->OBJECT("subcommand", ["arguments", 'z']));
+	}
+
+	public function test_MONITOR()
+	{
+		$this->assertEquals("monitor", $this->redis->MONITOR());
+	}
+
+	public function test_LASTSAVE()
+	{
+		$this->assertEquals("lastsave", $this->redis->LASTSAVE());
+	}
+
+	public function test_PING()
+	{
+		$this->assertEquals("ping", $this->redis->PING());
+	}
+
+	public function test_ECHO_()
+	{
+		$this->assertEquals("echo message", $this->redis->ECHO_("message"));
+	}
+
+	public function test_DEBUG_SEGFAULT()
+	{
+		$this->assertEquals("debug segfault", $this->redis->DEBUG_SEGFAULT());
+	}
+
+	public function test_DEBUG_OBJECT()
+	{
+		$this->assertEquals("debug object key", $this->redis->DEBUG_OBJECT("key"));
+	}
+
+	public function test_BITCOUNT()
+	{
+		$this->assertEquals("bitcount key", $this->redis->BITCOUNT("key"));
+		$this->assertEquals("bitcount key 1 5", $this->redis->BITCOUNT("key", 1, 5));
+		$this->assertEquals("bitcount key 0 5", $this->redis->BITCOUNT("key", 0, 5));
+		$this->assertEquals("bitcount key", $this->redis->BITCOUNT("key", 0, 0));
+	}
+
+	public function test_BITOP()
+	{
+		$this->assertEquals('bitop and destkey key', $this->redis->BITOP("AND", "destkey", "key"));
+		$this->assertEquals("bitop or destkey key key1", $this->redis->BITOP("OR", "destkey", "key", 'key1'));
+	}
+
+	public function test_CLIENT_KILL()
+	{
+		$this->assertEquals("client kill ip:port", $this->redis->CLIENT_KILL("ip", "port"));
+	}
+
+	public function test_CLIENT_LIST()
+	{
+		$this->assertEquals("client list", $this->redis->CLIENT_LIST());
+	}
+
+	public function test_CLIENT_GETNAME()
+	{
+		$this->assertEquals("client getname", $this->redis->CLIENT_GETNAME());
+	}
+
+	public function test_CLIENT_SETNAME()
+	{
+		$this->assertEquals("client setname connection_name", $this->redis->CLIENT_SETNAME("connection_name"));
+	}
+
+	public function test_DUMP()
+	{
+		$this->assertEquals("dump key", $this->redis->DUMP("key"));
+	}
+
+	public function test_EVAL_()
+	{
+		$this->assertEquals("eval script 1 keys args", $this->redis->EVAL_("script", ["keys"], ["args"]));
+		$this->assertEquals("eval script 2 keys k1 args", $this->redis->EVAL_("script", ["keys", 'k1'], ["args"]));
+		$this->assertEquals("eval script 2 keys k1 args arg1", $this->redis->EVAL_("script", ["keys", 'k1'], ["args", 'arg1']));
+	}
+
+	public function test_EVALSHA()
+	{
+		$this->assertEquals("evalsha sha1 1 keys args", $this->redis->EVALSHA("sha1", ["keys"], ["args"]));
+		$this->assertEquals("evalsha sha1 1 keys args", $this->redis->EVALSHA("sha1", ["keys"], ["args"]));
+		$this->assertEquals("evalsha sha1 2 keys k1 args", $this->redis->EVALSHA("sha1", ["keys", 'k1'], ["args"]));
+		$this->assertEquals("evalsha sha1 2 keys k1 args arg1", $this->redis->EVALSHA("sha1", ["keys", 'k1'], ["args", 'arg1']));
+
+	}
+
+	public function test_HINCRBYFLOAT()
+	{
+		$this->assertEquals("hincrbyfloat key field 5.5", $this->redis->HINCRBYFLOAT("key", "field", 5.5));
+	}
+
+	public function test_INCRBYFLOAT()
+	{
+		$this->assertEquals("incrbyfloat key 5.5", $this->redis->INCRBYFLOAT("key", 5.5));
+	}
+
+	public function test_MIGRATE()
+	{
+		$this->assertEquals("migrate host port key 2 15", $this->redis->MIGRATE("host", "port", "key", 2, 15));
+	}
+
+	public function test_PEXPIRE()
+	{
+		$this->assertEquals("pexpire key 5000", $this->redis->PEXPIRE("key", 5000));
+	}
+
+	public function test_PEXPIREAT()
+	{
+		$this->assertEquals("pexpireat key 192168", $this->redis->PEXPIREAT("key", 192168));
+	}
+
+	public function test_PSETEX()
+	{
+		$this->assertEquals("psetex key 5000 value", $this->redis->PSETEX("key", 5000, "value"));
+	}
+
+	public function test_PTTL()
+	{
+		$this->assertEquals("pttl key", $this->redis->PTTL("key"));
+	}
+
+	public function test_RESTORE()
+	{
+		$this->assertEquals("restore key 5000 serialized_value", $this->redis->RESTORE("key", 5000, "serialized_value"));
+	}
+
+	public function test_SCRIPT_EXISTS()
+	{
+		$this->assertEquals("script exists script", $this->redis->SCRIPT_EXISTS("script"));
+	}
+
+	public function test_SCRIPT_FLUSH()
+	{
+		$this->assertEquals("script flush", $this->redis->SCRIPT_FLUSH());
+	}
+
+	public function test_SCRIPT_KILL()
+	{
+		$this->assertEquals("script kill", $this->redis->SCRIPT_KILL());
+	}
+
+	public function test_SCRIPT_LOAD()
+	{
+		$this->assertEquals("script load script", $this->redis->SCRIPT_LOAD("script"));
+	}
+
+	public function test_TIME()
+	{
+		$this->assertEquals("time", $this->redis->TIME());
 	}
 }
 
