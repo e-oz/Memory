@@ -563,7 +563,7 @@ class TestRedisServer extends \Jamm\Tester\ClassTest
 
 	public function test_Watch()
 	{
-		$this->assertEquals('watch', $this->redis->watch());
+		$this->assertEquals('watch key', $this->redis->watch('key'));
 	}
 
 	public function test_Exec()
