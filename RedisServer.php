@@ -2,26 +2,8 @@
 namespace Jamm\Memory;
 /**
  * RedisServer allows you to work with Redis storage in PHP
- *
- * Redis version compatibility: 2.4 (also 2.2 and lower)
- *
+ * Redis version compatibility: 2.6.9 (and below)
  * You can send custom command using send_command() method.
- *
- * All debug-commands declared as magic methods and implemented via __call() method:
- * @method mixed DEBUG_OBJECT($key) Get debugging information about a key
- * @method mixed DEBUG_SEGFAULT() Make the server crash
- * @method string ECHO($message) Echo the given string
- * @method string PING() Ping the server
- * @method int LASTSAVE() Get the UNIX time stamp of the last successful save to disk Ping the server
- * @method mixed MONITOR() Listen for all requests received by the server in real time
- * @method mixed OBJECT($subcommand) Inspect the internals of Redis objects
- * @method mixed RANDOMKEY() Return a random key from the keyspace
- * @method mixed SAVE() Synchronously save the dataset to disk
- * @method mixed SHUTDOWN() Synchronously save the dataset to disk and then shut down the server
- * @method mixed SLOWLOG($subcommand) Manages the Redis slow queries log
- * @method string SPOP(string $key) Remove and return a random member from a set
- * @method string SRANDMEMBER(string $key) Get a random member from a set
- * @method string SYNC() Internal command used for replication
  */
 class RedisServer implements IRedisServer
 {
@@ -65,6 +47,7 @@ class RedisServer implements IRedisServer
 	 *  send_command('set','key','example value');
 	 * or:
 	 *  send_command('multi');
+	 *  send_command('config','ResetStat'); // if command contain 2 words, they should be separated
 	 *  send_command('set','a', serialize($arr));
 	 *  send_command('set','b', 1);
 	 *  send_command('execute');
@@ -112,7 +95,16 @@ class RedisServer implements IRedisServer
 	/* If some command is not wrapped... */
 	public function __call($name, $args)
 	{
-		array_unshift($args, str_replace('_', ' ', $name));
+		$command = trim(str_replace('_', ' ', $name, $replaced));
+		if ($replaced > 0)
+		{
+			$commands = explode(' ', $command);
+			$args     = array_merge($commands, $args);
+		}
+		else
+		{
+			array_unshift($args, $command);
+		}
 		return $this->_send($args);
 	}
 
@@ -208,16 +200,16 @@ class RedisServer implements IRedisServer
 		return $this->_send(array('multi'));
 	}
 
-	public function sAdd($set, $value)
+	public function sAdd($key, $member)
 	{
-		if (!is_array($value)) $value = func_get_args();
-		else array_unshift($value, $set);
-		return $this->__call('sadd', $value);
+		if (!is_array($member)) $member = func_get_args();
+		else array_unshift($member, $key);
+		return $this->__call('sadd', $member);
 	}
 
-	public function sMembers($set)
+	public function sMembers($key)
 	{
-		return $this->_send(array('smembers', $set));
+		return $this->_send(array('smembers', $key));
 	}
 
 	public function hSet($key, $field, $value)
@@ -258,7 +250,7 @@ class RedisServer implements IRedisServer
 		return $this->_send(array('setnx', $key, $value));
 	}
 
-	public function Watch()
+	public function Watch($key)
 	{
 		$args = func_get_args();
 		array_unshift($args, 'watch');
@@ -275,16 +267,16 @@ class RedisServer implements IRedisServer
 		return $this->_send(array('discard'));
 	}
 
-	public function sIsMember($set, $value)
+	public function sIsMember($key, $member)
 	{
-		return $this->_send(array('sismember', $set, $value));
+		return $this->_send(array('sismember', $key, $member));
 	}
 
-	public function sRem($set, $value)
+	public function sRem($key, $member)
 	{
-		if (!is_array($value)) $value = func_get_args();
-		else array_unshift($value, $set);
-		return $this->__call('srem', $value);
+		if (!is_array($member)) $member = func_get_args();
+		else array_unshift($member, $key);
+		return $this->__call('srem', $member);
 	}
 
 	public function Expire($key, $seconds)
@@ -313,9 +305,9 @@ class RedisServer implements IRedisServer
 		return $this->_send(array('append', $key, $value));
 	}
 
-	public function Auth($pasword)
+	public function Auth($password)
 	{
-		return $this->_send(array('Auth', $pasword));
+		return $this->_send(array('Auth', $password));
 	}
 
 	public function bgRewriteAOF()
@@ -328,18 +320,18 @@ class RedisServer implements IRedisServer
 		return $this->_send(array('bgSave'));
 	}
 
-	public function BLPop($keys, $timeout)
+	public function BLPop($key, $timeout)
 	{
-		if (!is_array($keys)) $keys = func_get_args();
-		else array_push($keys, $timeout);
-		return $this->__call('BLPop', $keys);
+		if (!is_array($key)) $key = func_get_args();
+		else array_push($key, $timeout);
+		return $this->__call('BLPop', $key);
 	}
 
-	public function BRPop($keys, $timeout)
+	public function BRPop($key, $timeout)
 	{
-		if (!is_array($keys)) $keys = func_get_args();
-		else array_push($keys, $timeout);
-		return $this->__call('BRPop', $keys);
+		if (!is_array($key)) $key = func_get_args();
+		else array_push($key, $timeout);
+		return $this->__call('BRPop', $key);
 	}
 
 	public function BRPopLPush($source, $destination, $timeout)
@@ -347,9 +339,9 @@ class RedisServer implements IRedisServer
 		return $this->_send(array('BRPopLPush', $source, $destination, $timeout));
 	}
 
-	public function Config_Get($pattern)
+	public function Config_Get($parameter)
 	{
-		return $this->_send(array('CONFIG', 'GET', $pattern));
+		return $this->_send(array('CONFIG', 'GET', $parameter));
 	}
 
 	public function Config_Set($parameter, $value)
@@ -359,7 +351,8 @@ class RedisServer implements IRedisServer
 
 	public function Config_ResetStat()
 	{
-		return $this->_send(array('CONFIG RESETSTAT'));
+		//return $this->_send(array('CONFIG', 'RESETSTAT'));
+		return $this->__call('CONFIG_RESETSTAT', []);
 	}
 
 	public function DBsize()
@@ -573,12 +566,12 @@ class RedisServer implements IRedisServer
 		return $this->_send(array('Publish', $channel, $message));
 	}
 
-	public function PUnsubscribe($patterns = null)
+	public function PUnsubscribe($pattern = null)
 	{
-		if (!empty($patterns))
+		if (!empty($pattern))
 		{
-			if (!is_array($patterns)) $patterns = array($patterns);
-			return $this->__call('PUnsubscribe', $patterns);
+			if (!is_array($pattern)) $pattern = array($pattern);
+			return $this->__call('PUnsubscribe', $pattern);
 		}
 		else return $this->_send(array('PUnsubscribe'));
 	}
@@ -858,5 +851,385 @@ class RedisServer implements IRedisServer
 			$destination[] = $aggregate;
 		}
 		return $this->__call('zUnionStore', $destination);
+	}
+
+	/** Internal command used for replication */
+	public function SYNC()
+	{
+		return $this->_send(array('SYNC'));
+	}
+
+	/**
+	 * Get a random member from a set
+	 * @param string $key
+	 * @param int $count
+	 * @return string
+	 */
+	public function SRANDMEMBER($key, $count = 1)
+	{
+		return $this->_send(array('SRANDMEMBER', $key, $count));
+	}
+
+	/**
+	 * Remove and return a random member from a set
+	 * @param string $key
+	 * @return string
+	 */
+	public function SPOP($key)
+	{
+		return $this->_send(array('SPOP', $key));
+	}
+
+	/**
+	 * Manages the Redis slow queries log
+	 * @param string $subcommand
+	 * @param string $argument
+	 * @return mixed
+	 */
+	public function SLOWLOG($subcommand, $argument = '')
+	{
+		return $this->_send(array('SLOWLOG', $subcommand, $argument));
+	}
+
+	/**
+	 * Synchronously save the dataset to disk and then shut down the server
+	 * One of modifiers can be turned on:
+	 * @param boolean $save   will force a DB saving operation even if no save points are configured.
+	 * @param boolean $nosave will prevent a DB saving operation even if one or more save points are configured.
+	 * @return bool
+	 */
+	public function SHUTDOWN($save = false, $nosave = false)
+	{
+		if ($save)
+		{
+			return $this->_send(array('SHUTDOWN', 'SAVE'));
+		}
+		elseif ($nosave)
+		{
+			return $this->_send(array('SHUTDOWN', 'NOSAVE'));
+		}
+		return $this->_send(array('SHUTDOWN'));
+	}
+
+	/** Synchronously save the dataset to disk */
+	public function SAVE()
+	{
+		return $this->_send(array('SAVE'));
+	}
+
+	/** Return a random key from the keyspace */
+	public function RANDOMKEY()
+	{
+		return $this->_send(array('RANDOMKEY'));
+	}
+
+	/**
+	 * Inspect the internals of Redis objects
+	 * @param string $subcommand
+	 * @param array $arguments
+	 * @return mixed
+	 */
+	public function OBJECT($subcommand, $arguments = array())
+	{
+		array_unshift($arguments, $subcommand);
+		return $this->__call('OBJECT', $arguments);
+	}
+
+	/** Listen for all requests received by the server in real time */
+	public function MONITOR()
+	{
+		return $this->_send(array('MONITOR'));
+	}
+
+	/** Get the UNIX time stamp of the last successful save to disk Ping the server */
+	public function LASTSAVE()
+	{
+		return $this->_send(array('LASTSAVE'));
+	}
+
+	/** Ping the server */
+	public function  PING()
+	{
+		return $this->_send(array('PING'));
+	}
+
+	/**
+	 * Echo the given string
+	 * @param string $message
+	 * @return string
+	 */
+	public function ECHO_($message)
+	{
+		return $this->_send(array('ECHO', $message));
+	}
+
+	/** Make the server crash */
+	public function DEBUG_SEGFAULT()
+	{
+		return $this->_send(array('DEBUG', 'SEGFAULT'));
+	}
+
+	/**
+	 * Get debugging information about a key
+	 * @param string $key
+	 * @return mixed
+	 */
+	public function DEBUG_OBJECT($key)
+	{
+		return $this->_send(array('DEBUG', 'OBJECT', $key));
+	}
+
+	/**
+	 * Count the number of set bits (population counting) in a string.
+	 * By default all the bytes contained in the string are examined.
+	 * It is possible to specify the counting operation only in an interval passing the additional arguments start and end.
+	 * @param string $key
+	 * @param int $start
+	 * @param int $end
+	 * @return int
+	 */
+	public function BITCOUNT($key, $start = 0, $end = 0)
+	{
+		if ($start > 0)
+		{
+			return $this->_send(array('BITCOUNT', $key, $start, $end));
+		}
+		return $this->_send(array('BITCOUNT', $key));
+	}
+
+	/**
+	 * Perform a bitwise operation between multiple keys (containing string values) and store the result in the destination key.
+	 * The BITOP command supports four bitwise operations: AND, OR, XOR and NOT, thus the valid forms to call the command are:
+	 * BITOP AND destkey srckey1 srckey2 srckey3 ... srckeyN
+	 * BITOP OR destkey srckey1 srckey2 srckey3 ... srckeyN
+	 * BITOP XOR destkey srckey1 srckey2 srckey3 ... srckeyN
+	 * BITOP NOT destkey srckey
+	 * As you can see NOT is special as it only takes an input key, because it performs inversion of bits so it only makes sense as an unary operator.
+	 * The result of the operation is always stored at destkey.
+	 * @param string $operation
+	 * @param string $destkey
+	 * @param string $key
+	 * @return integer
+	 * @usage
+	 * BITOP(operation, destkey, key1 [, key2...])
+	 */
+	public function BITOP($operation, $destkey, $key)
+	{
+		return $this->_send(array('BITOP', func_get_args()));
+	}
+
+	/**
+	 * The CLIENT KILL command closes a given client connection identified by ip:port.
+	 * The ip:port should match a line returned by the CLIENT LIST command.
+	 * @param $ip
+	 * @param $port
+	 * @return boolean
+	 */
+	public function CLIENT_KILL($ip, $port)
+	{
+		return $this->_send(array('CLIENT', 'KILL', $ip.':'.$port));
+	}
+
+	/** Get the list of client connections */
+	public function CLIENT_LIST()
+	{
+		return $this->_send(array('CLIENT', 'LIST'));
+	}
+
+	/** Get the current connection name */
+	public function CLIENT_GETNAME()
+	{
+		return $this->_send(array('CLIENT', 'GETNAME'));
+	}
+
+	/**
+	 * Set the current connection name
+	 * @param string $connection_name
+	 * @return boolean
+	 */
+	public function CLIENT_SETNAME($connection_name)
+	{
+		return $this->_send(array('CLIENT', 'SETNAME', $connection_name));
+	}
+
+	/**
+	 * Serialize the value stored at key in a Redis-specific format and return it to the user.
+	 * The returned value can be synthesized back into a Redis key using the RESTORE command.
+	 * @param string $key
+	 * @return string
+	 */
+	public function DUMP($key)
+	{
+		return $this->_send(array('DUMP', $key));
+	}
+
+	/**
+	 * Execute a Lua script server side
+	 * @param string $script
+	 * @param array $keys
+	 * @param array $args
+	 * @return mixed
+	 */
+	public function EVAL_($script, array $keys, array $args)
+	{
+		$params = array('EVAL', $script, count($keys));
+		$params = array_merge($params, $keys);
+		$params = array_merge($params, $args);
+		return $this->_send($params);
+	}
+
+	/**
+	 * Execute a Lua script server side
+	 * @param $sha1
+	 * @param array $keys
+	 * @param array $args
+	 * @return mixed
+	 */
+	public function EVALSHA($sha1, array $keys, array $args)
+	{
+		$params = array('EVALSHA', $sha1, count($keys));
+		$params = array_merge($params, $keys);
+		$params = array_merge($params, $args);
+		return $this->_send($params);
+	}
+
+	/**
+	 * Increment the specified field of an hash stored at key, and representing a floating point number, by the specified increment.
+	 * If the field does not exist, it is set to 0 before performing the operation.
+	 * @param string $key
+	 * @param string $field
+	 * @param float $increment
+	 * @return float the value of field after the increment
+	 */
+	public function HINCRBYFLOAT($key, $field, $increment)
+	{
+		return $this->_send(array('HINCRBYFLOAT', $key, $field, $increment));
+	}
+
+	/**
+	 * Increment the string representing a floating point number stored at key by the specified increment.
+	 * If the key does not exist, it is set to 0 before performing the operation.
+	 * @param string $key
+	 * @param float $increment
+	 * @return float the value of key after the increment
+	 */
+	public function INCRBYFLOAT($key, $increment)
+	{
+		return $this->_send(array('INCRBYFLOAT', $key, $increment));
+	}
+
+	/**
+	 * Atomically transfer a key from a Redis instance to another one.
+	 * On success the key is deleted from the original instance and is guaranteed to exist in the target instance.
+	 * The command is atomic and blocks the two instances for the time required to transfer the key, at any given time the key will appear to exist in a given instance or in the other instance, unless a timeout error occurs.
+	 * @param string $host
+	 * @param string $port
+	 * @param string $key
+	 * @param integer $destination_db
+	 * @param integer $timeout
+	 * @return boolean
+	 */
+	public function MIGRATE($host, $port, $key, $destination_db, $timeout)
+	{
+		return $this->_send(array('MIGRATE', $host, $port, $key, $destination_db, $timeout));
+	}
+
+	/**
+	 * Set a key's time to live in milliseconds
+	 * @param string $key
+	 * @param integer $milliseconds
+	 * @return integer 1 if the timeout was set, 0 if key does not exist or the timeout could not be set.
+	 */
+	public function PEXPIRE($key, $milliseconds)
+	{
+		return $this->_send(array('PEXPIRE', $key, $milliseconds));
+	}
+
+	/**
+	 * Set the expiration for a key as a UNIX timestamp specified in milliseconds
+	 * @param string $key
+	 * @param int $milliseconds_timestamp the Unix time at which the key will expire
+	 * @return integer 1 if the timeout was set, 0 if key does not exist or the timeout could not be set.
+	 */
+	public function PEXPIREAT($key, $milliseconds_timestamp)
+	{
+		return $this->_send(array('PEXPIREAT', $key, $milliseconds_timestamp));
+	}
+
+	/**
+	 * Set the value and expiration in milliseconds of a key
+	 * @param string $key
+	 * @param int $milliseconds
+	 * @param string $value
+	 * @return boolean
+	 */
+	public function PSETEX($key, $milliseconds, $value)
+	{
+		return $this->_send(array('PSETEX', $key, $milliseconds, $value));
+	}
+
+	/**
+	 * Get the time to live for a key in milliseconds
+	 * @param string $key
+	 * @return int Time to live in milliseconds or -1 when key does not exist or does not have a timeout.
+	 */
+	public function PTTL($key)
+	{
+		return $this->_send(array('PTTL', $key));
+	}
+
+	/**
+	 * Create a key using the provided serialized value, previously obtained using DUMP.
+	 * @param string $key
+	 * @param int $ttl If ttl is 0 the key is created without any expire, otherwise the specified expire time (in milliseconds) is set.
+	 * @param string $serialized_value
+	 * @return boolean
+	 */
+	public function RESTORE($key, $ttl, $serialized_value)
+	{
+		return $this->_send(array('RESTORE', $key, $ttl, $serialized_value));
+	}
+
+	/**
+	 * Check existence of scripts in the script cache.
+	 * @param string $script
+	 * @return array
+	 */
+	public function SCRIPT_EXISTS($script)
+	{
+		return $this->_send(array('SCRIPT', 'EXISTS', $script));
+	}
+
+	/** Remove all the scripts from the script cache. */
+	public function SCRIPT_FLUSH()
+	{
+		return $this->_send(array('SCRIPT', 'FLUSH'));
+	}
+
+	/** Kills the currently executing Lua script, assuming no write operation was yet performed by the script. */
+	public function SCRIPT_KILL()
+	{
+		return $this->_send(array('SCRIPT', 'KILL'));
+	}
+
+	/**
+	 * Load a script into the scripts cache, without executing it.
+	 * After the specified command is loaded into the script cache it will be callable using EVALSHA with the correct SHA1 digest
+	 * of the script, exactly like after the first successful invocation of EVAL.
+	 * @param string $script
+	 * @return string This command returns the SHA1 digest of the script added into the script cache.
+	 */
+	public function SCRIPT_LOAD($script)
+	{
+		return $this->_send(array('SCRIPT', 'LOAD', $script));
+	}
+
+	/**
+	 * Returns the current server time as a two items lists: a Unix timestamp and the amount of microseconds already elapsed in the current second
+	 * @return array
+	 */
+	public function TIME()
+	{
+		return $this->_send(array('TIME'));
 	}
 }
