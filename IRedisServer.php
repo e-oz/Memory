@@ -1,22 +1,6 @@
 <?php
-/** @noinspection PhpUndefinedClassInspection */
 namespace Jamm\Memory;
-/**
- * @method mixed DEBUG_OBJECT($key) Get debugging information about a key
- * @method mixed DEBUG_SEGFAULT() Make the server crash
- * @method string ECHO($message) Echo the given string
- * @method string PING() Ping the server
- * @method int LASTSAVE() Get the UNIX time stamp of the last successful save to disk Ping the server
- * @method mixed MONITOR() Listen for all requests received by the server in real time
- * @method mixed OBJECT($subcommand) Inspect the internals of Redis objects
- * @method mixed RANDOMKEY() Return a random key from the keyspace
- * @method mixed SAVE() Synchronously save the dataset to disk
- * @method mixed SHUTDOWN() Synchronously save the dataset to disk and then shut down the server
- * @method mixed SLOWLOG($subcommand) Manages the Redis slow queries log
- * @method string SPOP(string $key) Remove and return a random member from a set
- * @method string SRANDMEMBER(string $key) Get a random member from a set
- * @method string SYNC() Internal command used for replication
- */
+
 interface IRedisServer
 {
 	const Position_BEFORE = 'BEFORE';
@@ -36,10 +20,10 @@ interface IRedisServer
 
 	/**
 	 * Request for authentication in a password protected Redis server.
-	 * @param string $pasword
+	 * @param string $password
 	 * @return boolean
 	 */
-	public function Auth($pasword);
+	public function Auth($password);
 
 	/** Rewrites the append-only file to reflect the current dataset in memory. */
 	public function bgRewriteAOF();
@@ -53,10 +37,10 @@ interface IRedisServer
 	 *  key1,key2,key3,...,keyN,timeout
 	 * or
 	 *  array(key1,key2,keyN), timeout
-	 * @param string|array $keys
+	 * @param string|array $key
 	 * @param int $timeout - time of waiting
 	 */
-	public function BLPop($keys, $timeout);
+	public function BLPop($key, $timeout);
 
 	/**
 	 * Remove and get the last element in a list, or block until one is available
@@ -64,10 +48,10 @@ interface IRedisServer
 	 *  key1,key2,key3,...,keyN,timeout
 	 * or
 	 *  array(key1,key2,keyN), timeout
-	 * @param string|array $keys
+	 * @param string|array $key
 	 * @param int $timeout - time of waiting
 	 */
-	public function BRPop($keys, $timeout);
+	public function BRPop($key, $timeout);
 
 	/**
 	 * Pop a value from a list, push it to another list and return it; or block until one is available
@@ -80,10 +64,10 @@ interface IRedisServer
 
 	/**
 	 * Get the value of a configuration parameter
-	 * @param string $pattern
+	 * @param string $parameter
 	 * @return string
 	 */
-	public function Config_Get($pattern);
+	public function Config_Get($parameter);
 
 	/**
 	 * Set the value of a configuration parameter
@@ -466,10 +450,10 @@ interface IRedisServer
 
 	/**
 	 * Stop listening for messages posted to channels matching the given patterns
-	 * @param array|string|null $patterns
+	 * @param array|string|null $pattern
 	 * @return int
 	 */
-	public function PUnsubscribe($patterns = null);
+	public function PUnsubscribe($pattern = null);
 
 	/** Close the connection */
 	public function Quit();
@@ -954,8 +938,9 @@ interface IRedisServer
 	 * Marks the given keys to be watched for conditional execution of a transaction
 	 * each argument is a key:
 	 * watch('key1', 'key2', 'key3', ...)
+	 * @param string $key
 	 */
-	public function Watch();
+	public function Watch($key);
 
 	/**
 	 * Executes all previously queued commands in a transaction and restores the connection state to normal.
@@ -970,36 +955,285 @@ interface IRedisServer
 	public function Discard();
 
 	/** Add a member to a set
-	 * @param string $set
-	 * @param string|array $value or multiple arguments
+	 * @param string $key
+	 * @param string|array $member or multiple arguments
 	 * @return boolean
 	 */
-	public function sAdd($set, $value);
+	public function sAdd($key, $member);
 
 	/**
 	 * Returns if value is a member of the set.
-	 * @param string $set
-	 * @param string $value
+	 * @param string $key
+	 * @param string $member
 	 * @return boolean
 	 */
-	public function sIsMember($set, $value);
+	public function sIsMember($key, $member);
 
 	/**
 	 * Returns all the members of the set.
-	 * @param string $set
+	 * @param string $key
 	 * @return array
 	 */
-	public function sMembers($set);
+	public function sMembers($key);
 
 	/**
 	 * Remove member from the set. If 'value' is not a member of this set, no operation is performed.
 	 * An error is returned when the value stored at key is not a set.
-	 * @param string $set
-	 * @param string $value
+	 * @param string $key
+	 * @param string $member
 	 * @return boolean
 	 */
-	public function sRem($set, $value);
+	public function sRem($key, $member);
 
 	/** Get information and statistics about the server */
 	public function Info();
+
+	/** Internal command used for replication */
+	public function SYNC();
+
+	/**
+	 * Get a random member from a set
+	 * @param string $key
+	 * @param int $count
+	 * @return
+	 */
+	public function SRANDMEMBER($key, $count = 1);
+
+	/**
+	 * Remove and return a random member from a set
+	 * @param string $key
+	 */
+	public function SPOP($key);
+
+	/**
+	 * Manages the Redis slow queries log
+	 * @param string $subcommand
+	 * @param string $argument
+	 * @return
+	 */
+	public function SLOWLOG($subcommand, $argument = '');
+
+	/**
+	 * Synchronously save the dataset to disk and then shut down the server
+	 * One of modifiers can be turned on:
+	 * @param boolean $save   will force a DB saving operation even if no save points are configured.
+	 * @param boolean $nosave will prevent a DB saving operation even if one or more save points are configured.
+	 */
+	public function SHUTDOWN($save = false, $nosave = false);
+
+	/** Synchronously save the dataset to disk */
+	public function SAVE();
+
+	/** Return a random key from the keyspace */
+	public function RANDOMKEY();
+
+	/**
+	 * Inspect the internals of Redis objects
+	 * @param string $subcommand
+	 * @param array $arguments
+	 * @return
+	 */
+	public function OBJECT($subcommand, $arguments = array());
+
+	/** Listen for all requests received by the server in real time */
+	public function MONITOR();
+
+	/** Get the UNIX time stamp of the last successful save to disk Ping the server */
+	public function LASTSAVE();
+
+	/** Ping the server */
+	public function  PING();
+
+	/**
+	 * Echo the given string
+	 * @param string $message
+	 */
+	public function ECHO_($message);
+
+	/** Make the server crash */
+	public function DEBUG_SEGFAULT();
+
+	/**
+	 * Get debugging information about a key
+	 * @param string $key
+	 */
+	public function DEBUG_OBJECT($key);
+
+	/**
+	 * Count the number of set bits (population counting) in a string.
+	 * By default all the bytes contained in the string are examined.
+	 * It is possible to specify the counting operation only in an interval passing the additional arguments start and end.
+	 * @param $key
+	 * @param int $start
+	 * @param int $end
+	 * @return int
+	 */
+	public function BITCOUNT($key, $start = 0, $end = 0);
+
+	/**
+	 * Perform a bitwise operation between multiple keys (containing string values) and store the result in the destination key.
+	 * The BITOP command supports four bitwise operations: AND, OR, XOR and NOT, thus the valid forms to call the command are:
+	 * BITOP AND destkey srckey1 srckey2 srckey3 ... srckeyN
+	 * BITOP OR destkey srckey1 srckey2 srckey3 ... srckeyN
+	 * BITOP XOR destkey srckey1 srckey2 srckey3 ... srckeyN
+	 * BITOP NOT destkey srckey
+	 * As you can see NOT is special as it only takes an input key, because it performs inversion of bits so it only makes sense as an unary operator.
+	 * The result of the operation is always stored at destkey.
+	 * @param string $operation
+	 * @param string $destkey
+	 * @param string $key
+	 * @return integer
+	 * @usage
+	 * BITOP(operation, destkey, key1 [, key2...])
+	 */
+	public function BITOP($operation, $destkey, $key);
+
+	/**
+	 * The CLIENT KILL command closes a given client connection identified by ip:port.
+	 * The ip:port should match a line returned by the CLIENT LIST command.
+	 * @param $ip
+	 * @param $port
+	 * @return boolean
+	 */
+	public function CLIENT_KILL($ip, $port);
+
+	/** Get the list of client connections */
+	public function CLIENT_LIST();
+
+	/** Get the current connection name */
+	public function CLIENT_GETNAME();
+
+	/**
+	 * Set the current connection name
+	 * @param string $connection_name
+	 * @return boolean
+	 */
+	public function CLIENT_SETNAME($connection_name);
+
+	/**
+	 * Serialize the value stored at key in a Redis-specific format and return it to the user.
+	 * The returned value can be synthesized back into a Redis key using the RESTORE command.
+	 * @param string $key
+	 * @return string
+	 */
+	public function DUMP($key);
+
+	/**
+	 * Execute a Lua script server side
+	 * @param string $script
+	 * @param array $keys
+	 * @param array $args
+	 * @return mixed
+	 */
+	public function EVAL_($script, array $keys, array $args);
+
+	/**
+	 * Execute a Lua script server side
+	 * @param $sha1
+	 * @param array $keys
+	 * @param array $args
+	 * @return mixed
+	 */
+	public function EVALSHA($sha1, array $keys, array $args);
+
+	/**
+	 * Increment the specified field of an hash stored at key, and representing a floating point number, by the specified increment.
+	 * If the field does not exist, it is set to 0 before performing the operation.
+	 * @param string $key
+	 * @param string $field
+	 * @param float $increment
+	 * @return float the value of field after the increment
+	 */
+	public function HINCRBYFLOAT($key, $field, $increment);
+
+	/**
+	 * Increment the string representing a floating point number stored at key by the specified increment.
+	 * If the key does not exist, it is set to 0 before performing the operation.
+	 * @param string $key
+	 * @param float $increment
+	 * @return float the value of key after the increment
+	 */
+	public function INCRBYFLOAT($key, $increment);
+
+	/**
+	 * Atomically transfer a key from a Redis instance to another one.
+	 * On success the key is deleted from the original instance and is guaranteed to exist in the target instance.
+	 * The command is atomic and blocks the two instances for the time required to transfer the key, at any given time the key will appear to exist in a given instance or in the other instance, unless a timeout error occurs.
+	 * @param string $host
+	 * @param string $port
+	 * @param string $key
+	 * @param integer $destination_db
+	 * @param integer $timeout
+	 * @return boolean
+	 */
+	public function MIGRATE($host, $port, $key, $destination_db, $timeout);
+
+	/**
+	 * Set a key's time to live in milliseconds
+	 * @param string $key
+	 * @param integer $milliseconds
+	 * @return integer 1 if the timeout was set, 0 if key does not exist or the timeout could not be set.
+	 */
+	public function PEXPIRE($key, $milliseconds);
+
+	/**
+	 * Set the expiration for a key as a UNIX timestamp specified in milliseconds
+	 * @param string $key
+	 * @param int $milliseconds_timestamp the Unix time at which the key will expire
+	 * @return integer 1 if the timeout was set, 0 if key does not exist or the timeout could not be set.
+	 */
+	public function PEXPIREAT($key, $milliseconds_timestamp);
+
+	/**
+	 * Set the value and expiration in milliseconds of a key
+	 * @param string $key
+	 * @param int $milliseconds
+	 * @param string $value
+	 * @return boolean
+	 */
+	public function PSETEX($key, $milliseconds, $value);
+
+	/**
+	 * Get the time to live for a key in milliseconds
+	 * @param string $key
+	 * @return int Time to live in milliseconds or -1 when key does not exist or does not have a timeout.
+	 */
+	public function PTTL($key);
+
+	/**
+	 * Create a key using the provided serialized value, previously obtained using DUMP.
+	 * @param string $key
+	 * @param int $ttl If ttl is 0 the key is created without any expire, otherwise the specified expire time (in milliseconds) is set.
+	 * @param string $serialized_value
+	 * @return boolean
+	 */
+	public function RESTORE($key, $ttl, $serialized_value);
+
+	/**
+	 * Check existence of scripts in the script cache.
+	 * @param string $script
+	 * @return array
+	 */
+	public function SCRIPT_EXISTS($script);
+	
+	/** Remove all the scripts from the script cache. */
+	public function SCRIPT_FLUSH();
+	
+	/** Kills the currently executing Lua script, assuming no write operation was yet performed by the script. */
+	public function SCRIPT_KILL();
+
+	/**
+	 * Load a script into the scripts cache, without executing it. 
+	 * After the specified command is loaded into the script cache it will be callable using EVALSHA with the correct SHA1 digest 
+	 * of the script, exactly like after the first successful invocation of EVAL.
+	 * @param string $script
+	 * @return string This command returns the SHA1 digest of the script added into the script cache.
+	 */
+	public function SCRIPT_LOAD($script);
+	
+	/**
+	 * Returns the current server time as a two items lists: a Unix timestamp and the amount of microseconds already elapsed in the current second
+	 * @return array
+	 */
+	public function TIME();
 }
