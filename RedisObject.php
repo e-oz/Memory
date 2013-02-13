@@ -37,8 +37,10 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		$set       = $this->redis->SetNX($redis_key, serialize($value));
 		if (!$set) return false;
 		$ttl = intval($ttl);
-		if ($ttl < 1) $ttl = self::max_ttl;
-		$this->redis->Expire($redis_key, $ttl);
+		if ($ttl > 0)
+		{
+			$this->redis->Expire($redis_key, $ttl);
+		}
 		if (!empty($tags)) $this->setTags($key, $tags);
 		return true;
 	}
@@ -72,8 +74,14 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	public function save($key, $value, $ttl = 259200, $tags = NULL)
 	{
 		$ttl = intval($ttl);
-		if ($ttl < 1) $ttl = self::max_ttl;
-		$set = $this->redis->SetEX($this->prefix.$key, $ttl, serialize($value));
+		if ($ttl > 0)
+		{
+			$set = $this->redis->SetEX($this->prefix.$key, $ttl, serialize($value));
+		}
+		else
+		{
+			$set = $this->redis->Set($this->prefix.$key, serialize($value));
+		}
 		if (!$set) return false;
 		if (!empty($tags)) $this->setTags($key, $tags);
 		return true;

@@ -576,7 +576,7 @@ interface IRedisServer
 	 * Set the value of a key, only if the key does not exist
 	 * @param string $key
 	 * @param string $value
-	 * @return void
+	 * @return bool
 	 */
 	public function SetNX($key, $value);
 
