@@ -113,7 +113,7 @@ class APCObject extends MemoryObject implements IMemoryStorage
 	 * Read data from memory storage
 	 *
 	 * @param string|array $key (string or array of string keys)
-	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
+	 * @param mixed $ttl_left   = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
 	 * @return mixed
 	 */
 	public function read($key, &$ttl_left = -1)

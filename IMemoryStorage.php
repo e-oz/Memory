@@ -16,10 +16,10 @@ interface IMemoryStorage
 	/**
 	 * Save variable in memory storage
 	 *
-	 * @param string $key          - key
+	 * @param string $key            - key
 	 * @param mixed $value           - value
-	 * @param int $ttl           - time to live (store) in seconds
-	 * @param array|string $tags - array of tags for this key
+	 * @param int $ttl               - time to live (store) in seconds
+	 * @param array|string $tags     - array of tags for this key
 	 * @return bool
 	 */
 	public function save($key, $value, $ttl = 259200, $tags = NULL);
@@ -28,7 +28,7 @@ interface IMemoryStorage
 	 * Read data from memory storage
 	 *
 	 * @param string|array $key (string or array of string keys)
-	 * @param mixed $ttl_left = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
+	 * @param mixed $ttl_left   = (ttl - time()) of key. Use to exclude dog-pile effect, with lock/unlock_key methods.
 	 * @return mixed
 	 */
 	public function read($key, &$ttl_left = -1);

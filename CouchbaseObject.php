@@ -377,9 +377,9 @@ class CouchbaseObject extends MemoryObject implements IMemoryStorage
 		{
 			try
 			{
-				if (!$this->Couchbase->add($this->tag_prefix.$tag, '"'.addcslashes($key,'\\').'"'))
+				if (!$this->Couchbase->add($this->tag_prefix.$tag, '"'.addcslashes($key, '\\').'"'))
 				{
-					$this->Couchbase->append($this->tag_prefix.$tag, ',"'.addcslashes($key,'\\').'"');
+					$this->Couchbase->append($this->tag_prefix.$tag, ',"'.addcslashes($key, '\\').'"');
 				}
 			}
 			catch (\Exception $Exception)

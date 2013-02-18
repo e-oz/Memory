@@ -4,7 +4,7 @@ abstract class MemoryObject implements IMemoryStorage
 {
 	const max_ttl = 2592000;
 	protected $key_lock_time = 30;
-	protected $max_wait_unlock = 0.05;
+	protected $max_wait_unlock = 1.05;
 
 	private $last_err;
 	private $err_log;
@@ -31,7 +31,9 @@ abstract class MemoryObject implements IMemoryStorage
 	}
 
 	public function getErrLog()
-	{ return $this->err_log; }
+	{
+		return $this->err_log;
+	}
 
 	protected function addErrLog($err_log)
 	{

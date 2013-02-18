@@ -38,7 +38,8 @@ class MemcachedDecorator implements IMemcacheDecorator
 	}
 
 	public function connect($host = 'localhost', $port = 11211)
-	{ }
+	{
+	}
 
 	public function getStats()
 	{
