@@ -2,13 +2,15 @@
 namespace Jamm\Memory;
 class RedisObject extends MemoryObject implements IMemoryStorage
 {
-	const lock_key_prefix = '.lock_key.';
-	const tag_prefix      = '.tag.';
+	const lock_key_prefix   = '.lock_key.';
+	const tag_prefix        = '.tag.';
+	const serialized_prefix = '.s_key.';
 	/** @var IRedisServer */
 	protected $redis;
 	protected $prefix = 'K';
 	protected $tag_prefix;
 	protected $lock_key_prefix;
+	protected $serialize_key_prefix;
 
 	public function __construct($ID = '', IRedisServer $RedisServer = NULL)
 	{
@@ -34,9 +36,19 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	public function add($key, $value, $ttl = 259200, $tags = NULL)
 	{
 		$redis_key = $this->prefix.$key;
-		$set       = $this->redis->SetNX($redis_key, serialize($value));
-		if (!$set) return false;
-		$ttl = intval($ttl);
+		$ttl       = intval($ttl);
+		if (!is_scalar($value))
+		{
+			$set = $this->redis->SetNX($redis_key, serialize($value));
+			if (!$set) return false;
+			$this->setKeySerialization(true, $key, $ttl);
+		}
+		else
+		{
+			$set = $this->redis->SetNX($redis_key, $value);
+			if (!$set) return false;
+			$this->setKeySerialization(false, $key, $ttl);
+		}
 		if ($ttl > 0)
 		{
 			$this->redis->Expire($redis_key, $ttl);
@@ -76,15 +88,52 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		$ttl = intval($ttl);
 		if ($ttl > 0)
 		{
-			$set = $this->redis->SetEX($this->prefix.$key, $ttl, serialize($value));
+			if (is_scalar($value))
+			{
+				$set = $this->redis->SetEX($this->prefix.$key, $ttl, $value);
+				$this->setKeySerialization(false, $key, $ttl);
+			}
+			else
+			{
+				$set = $this->redis->SetEX($this->prefix.$key, $ttl, serialize($value));
+				$this->setKeySerialization(true, $key, $ttl);
+			}
 		}
 		else
 		{
-			$set = $this->redis->Set($this->prefix.$key, serialize($value));
+			if (is_scalar($value))
+			{
+				$set = $this->redis->Set($this->prefix.$key, $value);
+				$this->setKeySerialization(false, $key, 0);
+			}
+			else
+			{
+				$set = $this->redis->Set($this->prefix.$key, serialize($value));
+				$this->setKeySerialization(true, $key, $ttl);
+			}
 		}
 		if (!$set) return false;
 		if (!empty($tags)) $this->setTags($key, $tags);
 		return true;
+	}
+
+	protected function setKeySerialization($is_serialized, $key, $ttl)
+	{
+		if (!$is_serialized)
+		{
+			$this->redis->Del($this->serialize_key_prefix.$key);
+		}
+		else
+		{
+			if ($ttl > 0)
+			{
+				$this->redis->SetEX($this->serialize_key_prefix.$key, $ttl, 1);
+			}
+			else
+			{
+				$this->redis->Set($this->serialize_key_prefix.$key, 1);
+			}
+		}
 	}
 
 	/**
@@ -96,14 +145,17 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function read($key, &$ttl_left = -1)
 	{
-		$r = unserialize($this->redis->get($this->prefix.$key));
-		if ($r===false) return false;
+		$value = $this->redis->get($this->prefix.$key);
+		if ($this->redis->Exists($this->serialize_key_prefix.$key))
+		{
+			$value = unserialize($value);
+		}
 		if ($ttl_left!==-1)
 		{
 			$ttl_left = $this->redis->TTL($this->prefix.$key);
-			if ($ttl_left < 1) $ttl_left = self::max_ttl;
+			if ($ttl_left < 0) $ttl_left = 0;
 		}
-		return $r;
+		return $value;
 	}
 
 	/**
@@ -120,6 +172,8 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		foreach ($keys as $key)
 		{
 			$todel[] = $this->prefix.$key;
+			$todel[] = $this->serialize_key_prefix.$key;
+			$todel[] = $this->lock_key_prefix.$key;
 			if (!empty($tags))
 			{
 				foreach ($tags as $tag) $this->redis->sRem($tag, $key);
@@ -166,10 +220,9 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		$keys          = $this->redis->Keys($this->prefix.'*');
 		foreach ($keys as $key)
 		{
-			$content = $this->redis->Get($key);
-			if (empty($content)) continue;
-			$value = unserialize($content);
 			$index = substr($key, $prefix_length);
+			$value = $this->read($index);
+			if (empty($value)) continue;
 			if ($fx($value, $index)===true)
 			{
 				if (!$get_array) return $value;
@@ -198,6 +251,28 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 			$this->ReportError('empty keys are not allowed', __LINE__);
 			return false;
 		}
+		if (is_numeric($by_value) && !$this->redis->Exists($this->serialize_key_prefix.$key))
+		{
+			if (!($key_exists = $this->redis->Exists($this->prefix.$key)) || is_numeric($this->redis->Get($this->prefix.$key)))
+			{
+				if ($by_value >= 0)
+				{
+					$result = $this->redis->IncrBy($this->prefix.$key, $by_value);
+				}
+				else
+				{
+					$result = $this->redis->DecrBy($this->prefix.$key, $by_value*(-1));
+				}
+				if ($result!==false)
+				{
+					if ($ttl > 0)
+					{
+						$this->redis->Expire($this->prefix.$key, $ttl);
+					}
+					return $result;
+				}
+			}
+		}
 		if (!$this->acquire_key($key, $auto_unlocker)) return false;
 		$value = $this->read($key);
 		if ($value===null || $value===false) return $this->save($key, $by_value, $ttl);
@@ -222,6 +297,7 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 * another process can exclude dog-pile effect, if before updating the key he will try to get this mutex.
 	 * @param mixed $key
 	 * @param mixed $auto_unlocker_variable - pass empty, just declared variable
+	 * @return bool
 	 */
 	public function lock_key($key, &$auto_unlocker_variable)
 	{
@@ -277,8 +353,9 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 		{
 			$this->prefix = str_replace('.', '_', $ID).'.';
 		}
-		$this->tag_prefix      = self::tag_prefix.$this->prefix;
-		$this->lock_key_prefix = self::lock_key_prefix.$this->prefix;
+		$this->tag_prefix           = self::tag_prefix.$this->prefix;
+		$this->lock_key_prefix      = self::lock_key_prefix.$this->prefix;
+		$this->serialize_key_prefix = self::serialized_prefix.$this->prefix;
 	}
 
 	public function get_ID()
