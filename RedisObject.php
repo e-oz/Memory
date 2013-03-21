@@ -153,11 +153,6 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 			foreach ($key as $arr_key)
 			{
 				$arr_key = (string)$arr_key;
-				if ($data[$arr_key]===false || $data[$arr_key]===null)
-				{
-					unset($data[$arr_key]);
-					continue;
-				}
 				if ($return_ttl)
 				{
 					$data[$arr_key]     = $this->read_value($arr_key, $arr_key_ttl_left);
