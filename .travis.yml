@@ -7,11 +7,11 @@ env:
   - DB=redis
 
 before_script: 
-  - phpenv config-add tests/php.config  
+  - phpenv config-add test/php.config  
 
 # omitting "script:" will default to phpunit
 # use the $DB env variable to determine the phpunit.xml to use
-script: php tests/runtests.php
+script: php test/runtests.php
 
 # configure notifications (email, IRC, campfire etc)
 notifications:
