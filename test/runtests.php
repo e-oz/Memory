@@ -5,7 +5,7 @@ $Autoloader->set_modules_dir(__DIR__.'/../vendors');
 $Autoloader->register_namespace_dir('Jamm\\Memory', __DIR__.'/../');
 $Autoloader->start();
 
-$Storage = new \Jamm\Memory\APCObject();
+$Storage = new \Jamm\Memory\RedisObject();
 $Test    = new \Jamm\Memory\Tests\TestMemoryObject($Storage);
 $Test->RunTests();
 foreach ($Test->getTests() as $test_result)
