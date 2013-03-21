@@ -1,6 +1,7 @@
-PHP Memory Cacher [![Build Status](https://travis-ci.org/jamm/Memory.png)](https://travis-ci.org/jamm/Memory)
+PHP Memory Cacher 
 =================
-#Key-value storage in memory
+#Key-value storage in memory  
+[![Build Status](https://travis-ci.org/jamm/Memory.png)](https://travis-ci.org/jamm/Memory)
 As a storage can be used:
 
  * [APC](http://pecl.php.net/package/APC)
