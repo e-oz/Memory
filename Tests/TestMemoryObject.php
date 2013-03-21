@@ -46,7 +46,7 @@ class TestMemoryObject extends \Jamm\Tester\ClassTest
 		$call = $this->mem->del(array(__METHOD__.'d1', __METHOD__.'d2'));
 		$this->assertTrue($call);
 		$check = $this->mem->read(array(__METHOD__.'d1', __METHOD__.'d2'));
-		$this->assertTrue(empty($check))->addCommentary('variables still in cache');
+		$this->assertTrue(empty($check))->addCommentary('variables still in cache: '.print_r($check, 1));
 	}
 
 	public function test_del_by_tags()
@@ -61,7 +61,7 @@ class TestMemoryObject extends \Jamm\Tester\ClassTest
 		$call = $this->mem->del_by_tags(array('tag1', 'tag2'));
 		$this->assertTrue($call);
 		$check = $this->mem->read(array(__METHOD__.'d1', __METHOD__.'d2'));
-		$this->assertTrue(empty($check))->addCommentary('variables still in cache');
+		$this->assertTrue(empty($check))->addCommentary('variables still in cache: '.print_r($check, 1));
 	}
 
 	public function test_del_old()
