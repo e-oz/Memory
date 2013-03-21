@@ -145,6 +145,44 @@ class RedisObject extends MemoryObject implements IMemoryStorage
 	 */
 	public function read($key, &$ttl_left = -1)
 	{
+		if (is_array($key))
+		{
+			$data       = array();
+			$return_ttl = ($ttl_left!==-1 ? true : false);
+			$ttl_left   = array();
+			foreach ($key as $arr_key)
+			{
+				$arr_key = (string)$arr_key;
+				if ($data[$arr_key]===false || $data[$arr_key]===null)
+				{
+					unset($data[$arr_key]);
+					continue;
+				}
+				if ($return_ttl)
+				{
+					$data[$arr_key]     = $this->read_value($arr_key, $arr_key_ttl_left);
+					$ttl_left[$arr_key] = $arr_key_ttl_left;
+				}
+				else
+				{
+					$data[$arr_key] = $this->read_value($arr_key);
+				}
+			}
+			return $data;
+		}
+		else
+		{
+			return $this->read_value($key, $ttl_left);
+		}
+	}
+
+	/**
+	 * @param $key
+	 * @param $ttl_left
+	 * @return mixed|string
+	 */
+	protected function read_value($key, &$ttl_left = -1)
+	{
 		$value = $this->redis->get($this->prefix.$key);
 		if ($this->redis->Exists($this->serialize_key_prefix.$key))
 		{
