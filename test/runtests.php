@@ -9,9 +9,17 @@ $RedisServer = new \Jamm\Memory\RedisServer();
 $RedisServer->FlushAll();
 $Storage = new \Jamm\Memory\RedisObject('Travis', $RedisServer);
 $Test    = new \Jamm\Memory\Tests\TestMemoryObject($Storage);
+$Printer = new \Jamm\Tester\ResultsPrinter();
 $Test->RunTests();
-$Printer = new \Jamm\Tester\ResultsPrinter($Test->getTests());
+$tests = $Test->getTests();
+$RedisServer->FlushAll();
+$TestRedisServer = new \Jamm\Memory\Tests\TestRedisServer($RedisServer);
+$TestRedisServer->RunTests();
+$tests = array_merge($tests, $Test->getTests());
+
+$Printer->addTests($tests);
 $Printer->printResultsLine();
+
 foreach ($Test->getTests() as $test_result)
 {
 	if (!$test_result->isSuccessful())
