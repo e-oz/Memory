@@ -5,7 +5,9 @@ $Autoloader->set_modules_dir(__DIR__.'/../vendors');
 $Autoloader->register_namespace_dir('Jamm\\Memory', __DIR__.'/../');
 $Autoloader->start();
 
-$Storage = new \Jamm\Memory\RedisObject();
+$RedisServer = new \Jamm\Memory\RedisServer();
+$RedisServer->FlushAll();
+$Storage = new \Jamm\Memory\RedisObject('Travis', $RedisServer);
 $Test    = new \Jamm\Memory\Tests\TestMemoryObject($Storage);
 $Test->RunTests();
 $Printer = new \Jamm\Tester\ResultsPrinter($Test->getTests());

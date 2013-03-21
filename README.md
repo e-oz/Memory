@@ -1,4 +1,4 @@
-PHP Memory Cacher
+PHP Memory Cacher [![Build Status](https://travis-ci.org/jamm/Memory.png)](https://travis-ci.org/jamm/Memory)
 =================
 #Key-value storage in memory
 As a storage can be used:
