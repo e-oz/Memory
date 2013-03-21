@@ -230,7 +230,10 @@ class TestMemoryObject extends \Jamm\Tester\ClassTest
 		$this->assertEquals($call, array('key3' => array('kk1' => 5, 'kk2' => 5), 'key4' => array('kk1' => 2, 'kk2' => 4)));
 		$call = $this->mem->select_fx(function ($s, $index)
 		{
-			if ($s['kk1'] > 7 || ($s['id']==0 && $s['kk2'] < 5)) return true;
+			if ($s['kk1'] > 7 || (empty($s['id']) && $s['kk2'] < 5)) 
+			{
+				return true;
+			}
 			else return false;
 		}, true);
 		$this->assertEquals($call, array('key4' => array('kk1' => 2, 'kk2' => 4), 'key6' => array('id' => 1, 'kk1' => 9, 'kk2' => 5), 'key7' => array('id' => 0, 'kk1' => 7, 'kk2' => 4)));
