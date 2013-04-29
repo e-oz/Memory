@@ -352,7 +352,7 @@ class RedisServer implements IRedisServer
 	public function Config_ResetStat()
 	{
 		//return $this->_send(array('CONFIG', 'RESETSTAT'));
-		return $this->__call('CONFIG_RESETSTAT', []);
+		return $this->__call('CONFIG_RESETSTAT', array());
 	}
 
 	public function DBsize()
