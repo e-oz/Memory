@@ -2,7 +2,7 @@
 include __DIR__.'/../vendors/Autoload/lib/Jamm/Autoload/Autoloader.php';
 $Autoloader = new Jamm\Autoload\Autoloader(false);
 $Autoloader->set_modules_dir(__DIR__.'/../vendors');
-$Autoloader->register_namespace_dir('Jamm\\Memory', __DIR__.'/../');
+$Autoloader->register_namespace_dir('Jamm\\Memory', __DIR__.'/../lib/Jamm/Memory');
 $Autoloader->start();
 
 $RedisServer = new \Jamm\Memory\RedisServer();

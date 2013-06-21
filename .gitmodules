@@ -1,6 +1,0 @@
-[submodule "vendors/Autoload"]
-	path = vendors/Autoload
-	url = git://github.com/jamm/Autoload.git
-[submodule "vendors/Jamm/Tester"]
-	path = vendors/Jamm/Tester
-	url = git://github.com/jamm/Tester.git
