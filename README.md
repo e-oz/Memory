@@ -4,10 +4,10 @@ PHP Memory Cacher
 [![Build Status](https://travis-ci.org/jamm/Memory.png)](https://travis-ci.org/jamm/Memory)  
 As a storage can be used:
 
- * [APC](http://pecl.php.net/package/APC)
  * [Redis](http://redis.io)
  * [Couchbase](http://www.couchbase.com)
- * [Memcache](http://pecl.php.net/package/memcache)
+ * [Memcached](http://pecl.php.net/package/memcache)
+ * [APC](http://pecl.php.net/package/APC) 
  * [Shared memory](http://php.net/manual/en/book.shmop.php)
  
 All storage objects have one interface, so you can switch them without changing the working code.
@@ -16,7 +16,7 @@ All storage objects have one interface, so you can switch them without changing 
 + Tags for keys
 + "Dog-pile" ("cache miss storm") and "race condition" effects are excluded
 + Lock, unlock or acquire key just by one command
-+ Auto Unlocker - any locked key will be automatically unlocked (on exit from function or script)
++ Auto Unlocker - any locked key will be automatically unlocked (on exit from function or script, RAII)
 + You can select keys via callback-function (Map)
 + One interface for all storages - you can change storage without changing your code
 + Increment() method can work with arrays, strings and numeric values
@@ -52,7 +52,7 @@ or acquire:
 Difference between these methods is what they will do when key is locked by another process: lock_key() will just return 'false', 
 acquire_key() will wait until key will not be unlocked (maximum time of waiting declared in code).  
 
-All 'locks' here are *soft*. It means keys aren't locked for write or read, but you can check, if key is 'locked' or not, and what to do with this - is decision of your script.    
+All 'locks' here are *soft*. It means keys aren't locked for write or read, but you can check, if key is 'locked' or not, and what to do with it - is decision of your script.    
 It was designed to avoid dead-locks and unnecessary queues of clients which waits for access the key.
 
 Example in code:
@@ -76,16 +76,6 @@ You can use each storage separately, requirements are individually for storages
 
 ###PHP version: 5.3+
 
-##For APCObject:
-[APC](http://pecl.php.net/package/APC) should be installed, and this setting should be added in php.ini (or apc.ini if you use it)
-
-+ apc.slam_defense = Off
-+ __recommended:__ apc.user_ttl = 0
-
-##For Memcache:
-[Memcache](http://pecl.php.net/package/memcache) or [Memcached](http://pecl.php.net/package/memcached) PHP extension should be installed.  
-Memcache is not the fastest and most secure storage, so use it only when necessary. [Read more](http://code.google.com/p/memcached/wiki/WhyNotMemcached)
-
 ##For Redis:
 [Redis](http://redis.io) server should be installed (in debian/ubuntu: "apt-get install redis-server").  
 Supported version is 2.6.9 and below.
@@ -96,15 +86,24 @@ Installed [Couchbase PHP SDK](http://www.couchbase.com/develop/php/current)
 [Couchbase Server 2.0](http://www.couchbase.com/download)  
 Use few nodes if you need fault-tolerance.  
 
+##For Memcache:
+[Memcache](http://pecl.php.net/package/memcache) or [Memcached](http://pecl.php.net/package/memcached) PHP extension should be installed.  
+
+##For APCObject:
+[APC](http://pecl.php.net/package/APC) should be installed, and this setting should be added in php.ini (or apc.ini if you use it)
+
++ apc.slam_defense = Off
++ __recommended:__ apc.user_ttl = 0
+
 ##For SHMObject and MultiAccess:
 PHP should support shm-functions and msg-functions (--enable-shmop --enable-sysvsem --enable-sysvshm --enable-sysvmsg)  
 Should be used only in specific cases (e.g. mutexes), or when other extensions can not be installed.
 
 #Storages comparison:
-**APC** is a very fast and easy to use storage, use it when RAM on app-server is enough for caching.  
-If APC can not be used for caching data, or you just like Redis - use **Redis**.    
-Use **Couchbase** if you need fault-tolerant and very easy scalable cluster.   
-Redis, Couchbase and **Memcache(d)** can be used for cross-process communication. Also, data in Redis and Couchbase storages will be restored even after server reboot.     
+**Redis** is the best key-value storage for cache.   
+Use **Couchbase** if you need fault-tolerant and very easy scalable cluster and if you can afford it ([minimal hardware requirements](http://www.couchbase.com/docs//couchbase-manual-2.0/couchbase-getting-started-prepare-hardware.html)).    
+Redis, Couchbase and **Memcache(d)** can be used for cross-process communication. Also, data in Redis and Couchbase storages will be restored even after server reboot.  
+**APC** is a very fast and easy to use storage, but was abandoned after PHP 5.5 release with builtin opcode caching, so it will be still exist in this library, but consider to use Redis instead.              
 If you can't install any third-party packages, you can use **Shared Memory** - but your PHP should be compiled with support of shmop-functions.  
 
 Tests:
