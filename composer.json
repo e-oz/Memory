@@ -15,7 +15,8 @@
 	},
 	"autoload": {
 		"psr-0": {
-			"Jamm\\Memory": "lib/Jamm/Memory"
+			"Jamm": "Jamm/Memory/lib"
+			
 		}
 	},
 	"type": "library",
