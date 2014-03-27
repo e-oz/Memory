@@ -12,7 +12,7 @@ class TestMethodsGenerator
 	{
 		$Reflection = new \ReflectionClass($Interface);
 		$Methods    = $Reflection->getMethods();
-		$existing   = [];
+		$existing   = array();
 		if (!empty($ExistingMethodsInterface))
 		{
 			$ExistingClass   = new \ReflectionClass($ExistingMethodsInterface);
@@ -53,7 +53,7 @@ class TestMethodsGenerator
 		else
 		{
 			$code .= "\t\t//TODO: implement test\n";
-			$params = [];
+			$params = array();
 			foreach ($arguments as $Argument)
 			{
 				$params[] = strtolower($Argument->name);
