@@ -649,7 +649,7 @@ class TestRedisServer extends \Jamm\Tester\ClassTest
 
 	public function test_OBJECT()
 	{
-		$this->assertEquals("object subcommand arguments z", $this->redis->OBJECT("subcommand", ["arguments", 'z']));
+		$this->assertEquals("object subcommand arguments z", $this->redis->OBJECT("subcommand", array("arguments", 'z')));
 	}
 
 	public function test_MONITOR()
@@ -723,17 +723,17 @@ class TestRedisServer extends \Jamm\Tester\ClassTest
 
 	public function test_EVAL_()
 	{
-		$this->assertEquals("eval script 1 keys args", $this->redis->EVAL_("script", ["keys"], ["args"]));
-		$this->assertEquals("eval script 2 keys k1 args", $this->redis->EVAL_("script", ["keys", 'k1'], ["args"]));
-		$this->assertEquals("eval script 2 keys k1 args arg1", $this->redis->EVAL_("script", ["keys", 'k1'], ["args", 'arg1']));
+		$this->assertEquals("eval script 1 keys args", $this->redis->EVAL_("script", array("keys"), array("args")));
+		$this->assertEquals("eval script 2 keys k1 args", $this->redis->EVAL_("script", array("keys", 'k1'), array("args")));
+		$this->assertEquals("eval script 2 keys k1 args arg1", $this->redis->EVAL_("script", array("keys", 'k1'), array("args", 'arg1')));
 	}
 
 	public function test_EVALSHA()
 	{
-		$this->assertEquals("evalsha sha1 1 keys args", $this->redis->EVALSHA("sha1", ["keys"], ["args"]));
-		$this->assertEquals("evalsha sha1 1 keys args", $this->redis->EVALSHA("sha1", ["keys"], ["args"]));
-		$this->assertEquals("evalsha sha1 2 keys k1 args", $this->redis->EVALSHA("sha1", ["keys", 'k1'], ["args"]));
-		$this->assertEquals("evalsha sha1 2 keys k1 args arg1", $this->redis->EVALSHA("sha1", ["keys", 'k1'], ["args", 'arg1']));
+		$this->assertEquals("evalsha sha1 1 keys args", $this->redis->EVALSHA("sha1", array("keys"), array("args")));
+		$this->assertEquals("evalsha sha1 1 keys args", $this->redis->EVALSHA("sha1", array("keys"), array("args")));
+		$this->assertEquals("evalsha sha1 2 keys k1 args", $this->redis->EVALSHA("sha1", array("keys", 'k1'), array("args")));
+		$this->assertEquals("evalsha sha1 2 keys k1 args arg1", $this->redis->EVALSHA("sha1", array("keys", 'k1'), array("args", 'arg1')));
 
 	}
 

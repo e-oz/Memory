@@ -79,7 +79,7 @@ class CommandsListCheck
 					$diff           = array_diff($args_in_doc, $args_in_method);
 					if (!empty($diff))
 					{
-						$Result->diff_methods[$method_name] = [$diff, $args_in_method, $args_in_doc];
+						$Result->diff_methods[$method_name] = array($diff, $args_in_method, $args_in_doc);
 					}
 				}
 			}
@@ -103,7 +103,7 @@ class CommandsListCheck
 	{
 		/** @var \ReflectionParameter[] $Parameters */
 		$Parameters = $Method->getParameters();
-		$arr        = [];
+		$arr        = array();
 		foreach ($Parameters as $Parameter)
 		{
 			$arr[] = strtolower($Parameter->name);
@@ -115,9 +115,9 @@ class CommandsListCheck
 	{
 		if (!isset($doc_method['arguments']) || !is_array($doc_method['arguments']))
 		{
-			return [];
+			return array();
 		}
-		$arr = [];
+		$arr = array();
 		foreach ($doc_method['arguments'] as $argument)
 		{
 			if (is_array($argument['name']))
@@ -132,7 +132,7 @@ class CommandsListCheck
 
 	public function addExcludedFromDiffMethod($method)
 	{
-		if (!is_array($method)) $method = [$method];
+		if (!is_array($method)) $method = array($method);
 		foreach ($method as $m)
 		{
 			$this->no_diff_methods[] = $this->getUnifiedMethodName($m);
