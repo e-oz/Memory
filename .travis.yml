@@ -5,8 +5,10 @@ php:
   - 5.4
 env:
   - DB=redis
+services:
+  - redis-server
 
-before_script: 
+before_script:
   - phpenv config-add test/php.config  
 
 # omitting "script:" will default to phpunit
